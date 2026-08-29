@@ -1,0 +1,1611 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Generador de Programaciones Didácticas - IA Gemini</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .editable-content[contenteditable="true"] { transition: all 0.2s; }
+        .editable-content[contenteditable="true"]:focus { outline: none; box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.4); background-color: #fcfcfc; border-radius: 4px; }
+
+        .template-table { width: 100%; border-collapse: collapse; margin-top: 0.5rem; margin-bottom: 1rem; }
+        .template-table th { background-color: #f3f4f6; padding: 8px; border: 1px solid #d1d5db; font-weight: bold; text-align: left; }
+        .template-table td { padding: 8px; border: 1px solid #d1d5db; vertical-align: top; }
+        
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: #f1f1f1; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+        .tab-btn { background: #f1f5f9; padding: 10px 15px; border: 1px solid #cbd5e1; border-bottom: none; margin-right: 5px; margin-bottom: 5px; border-radius: 5px 5px 0 0; font-weight: 600; color: #475569; cursor: pointer; transition: all 0.2s; font-size: 0.9rem; }
+        .tab-btn.active { background: #fff; color: #1e3a8a; border-bottom: 1px solid #fff; margin-bottom: 5px; }
+        .tab-btn.no-number { color: #7e22ce; }
+        .tab-btn.no-number.active { color: #581c87; }
+        
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+
+        .generated-content h3 { font-size: 1.125rem; font-weight: bold; color: #1e3a8a; background-color: #ebf8ff; padding: 0.5rem; border-left: 4px solid #2563eb; margin-top: 1.5rem; margin-bottom: 0.5rem; }
+        .generated-content h4 { font-size: 1rem; font-weight: bold; color: #1f2937; margin-top: 1rem; margin-bottom: 0.25rem; }
+        .generated-content p { margin-bottom: 0.5rem; text-align: justify; }
+        .generated-content table { width: 100%; border-collapse: collapse; margin-top: 0.5rem; margin-bottom: 1rem; }
+        .generated-content th { background-color: #f3f4f6; padding: 8px; border: 1px solid #d1d5db; font-weight: bold; text-align: left; }
+        .generated-content td { padding: 8px; border: 1px solid #d1d5db; vertical-align: top; }
+    </style>
+</head>
+<body class="bg-gray-100 text-gray-800 font-sans">
+
+    <nav class="bg-blue-900 text-white p-4 shadow-md sticky top-0 z-50 flex flex-wrap justify-between items-center no-print gap-4">
+        <div class="text-xl font-bold flex items-center"><i class="fas fa-book-open mr-2"></i> CreaProg IA (ESO/Bach)</div>
+        <div class="space-x-2 flex flex-wrap gap-2">
+            <button onclick="saveWork()" class="bg-green-600 hover:bg-green-700 px-4 py-2 rounded shadow transition"><i class="fas fa-save mr-1"></i> Guardar como...</button>
+            <label class="bg-yellow-600 hover:bg-yellow-700 px-4 py-2 rounded shadow cursor-pointer transition">
+                <i class="fas fa-folder-open mr-1"></i> Cargar
+                <input type="file" id="loadFile" class="hidden" accept=".json" onchange="loadWork(event)">
+            </label>
+        </div>
+    </nav>
+
+    <div class="bg-gray-200 pt-4 px-4 sticky top-[60px] z-40 no-print shadow-sm">
+        <div class="container mx-auto flex flex-wrap border-b border-gray-300">
+            <button onclick="showTab('tab1')" class="tab-btn active" id="btn-tab1"><i class="fas fa-cogs mr-1"></i> 1.Config. IA</button>
+            <button onclick="showTab('tab2')" class="tab-btn" id="btn-tab2"><i class="fas fa-school mr-1"></i> 2.Datos</button>
+            <button onclick="showTab('tab3')" class="tab-btn" id="btn-tab3"><i class="fas fa-layer-group mr-1"></i> 3.Sda/UD</button>
+            <button onclick="showTab('tab4')" class="tab-btn" id="btn-tab4"><i class="fas fa-calendar-alt mr-1"></i> 4.Curso Completo</button>
+            <button onclick="showTab('tab5')" class="tab-btn" id="btn-tab5"><i class="fas fa-table mr-1"></i> 5.Resumen</button>
+            <button onclick="showTab('tab6')" class="tab-btn" id="btn-tab6"><i class="fas fa-tasks mr-1"></i> 6.Seguimiento</button>
+            <button onclick="showTab('tab7')" class="tab-btn no-number" id="btn-tab7"><i class="fas fa-file-alt mr-1"></i> Parte común</button>
+            <button onclick="showTab('tab8')" class="tab-btn no-number" id="btn-tab8"><i class="fas fa-file-alt mr-1"></i> Programación materia</button>
+            <button onclick="showTab('tab9')" class="tab-btn no-number" id="btn-tab9"><i class="fas fa-file-alt mr-1"></i> Doc. Resumen</button>
+            <button onclick="showTab('tab10')" class="tab-btn no-number" id="btn-tab10"><i class="fas fa-file-alt mr-1"></i> Doc. Seguimiento</button>
+        </div>
+    </div>
+
+    <div class="container mx-auto p-4 space-y-6 no-print">
+        
+        <!-- PESTAÑA 1: CONFIGURACIÓN IA -->
+        <div id="tab1" class="tab-content active">
+            <div class="bg-white p-6 rounded-lg shadow-md">
+                <h2 class="text-lg font-semibold text-blue-900 border-b pb-2 mb-4"><i class="fas fa-robot mr-2"></i> Configuración de la Inteligencia Artificial</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label class="block text-sm font-medium mb-1">API Key de Gemini</label>
+                        <div class="flex gap-2">
+                            <input type="password" id="apiKey" class="flex-grow border rounded p-2 focus:ring focus:ring-blue-200" placeholder="AIzaSy...">
+                            <button onclick="loadModels()" class="bg-blue-700 hover:bg-blue-800 text-white px-4 py-2 rounded shadow transition font-semibold whitespace-nowrap">Cargar Modelos</button>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-1">Modelo de IA (Recomendado: Pro o Flash)</label>
+                        <select id="aiModel" class="w-full border rounded p-2 focus:ring focus:ring-blue-200 bg-gray-50">
+                            <option value="" disabled selected>Introduce tu API Key y pulsa Cargar Modelos</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- PESTAÑA 2: DATOS CENTRO Y DEPARTAMENTO -->
+        <div id="tab2" class="tab-content">
+            <div class="bg-white p-6 rounded-lg shadow-md border-t-4 border-indigo-500">
+                <h2 class="text-lg font-semibold text-blue-900 border-b pb-2 mb-4"><i class="fas fa-users mr-2"></i> Datos del Centro y Departamento Didáctico</h2>
+                <p class="text-sm text-gray-600 mb-4">Esta información será utilizada por la IA para generar la Parte Común y contextualizar las Situaciones de Aprendizaje.</p>
+                
+                <div class="space-y-4">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium mb-1">Nombre del Centro</label>
+                            <input type="text" id="docCenter" class="w-full border rounded p-2" placeholder="Ej: IES Nombre del Instituto">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium mb-1">Curso Académico</label>
+                            <input type="text" id="academicYear" class="w-full border rounded p-2" placeholder="Ej: 2024/2025">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-1">Departamento Didáctico</label>
+                        <input type="text" id="deptName" class="w-full border rounded p-2" placeholder="Ej: Departamento de Biología y Geología">
+                    </div>
+                    
+                    <div class="border-2 border-indigo-200 rounded-lg p-4 bg-indigo-50">
+                        <div class="flex justify-between items-center mb-2">
+                            <label class="block text-base font-bold text-indigo-800">Profesorado del Departamento</label>
+                            <button onclick="addTeacherRow()" class="bg-indigo-500 hover:bg-indigo-600 text-white px-3 py-1 rounded shadow text-sm transition"><i class="fas fa-plus mr-1"></i> Añadir profesor</button>
+                        </div>
+                        <div id="deptTeachersContainer" class="space-y-2">
+                            <div class="flex items-center gap-2 teacher-row">
+                                <label class="flex items-center gap-1 text-xs text-gray-600 cursor-pointer whitespace-nowrap">
+                                    <input type="checkbox" class="form-checkbox text-blue-600 is-head">
+                                    Jefe/a Depto.
+                                </label>
+                                <input type="text" class="flex-grow border rounded p-2 teacher-name" placeholder="Nombre del profesor/a">
+                                <input type="text" class="flex-grow border rounded p-2 teacher-subjects" placeholder="Materias y niveles que imparte">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="border-2 border-indigo-200 rounded-lg p-4 bg-indigo-50">
+                        <label class="block text-base font-bold mb-2 text-indigo-800">Características del entorno, centro y alumnado <span class="text-xs font-normal text-gray-500 italic">(No es obligatorio rellenar. Si se deja vacío la IA actuará a su criterio.)</span></label>
+                        <textarea id="contextInfo" class="w-full border rounded p-2 h-32" placeholder="Ej: Centro rural con alta motivación, alumnado con diversidad funcional, entorno con recursos naturales..."></textarea>
+                    </div>
+                    
+                    <div class="border-2 border-indigo-200 rounded-lg p-4 bg-indigo-50">
+                        <label class="block text-base font-bold mb-2 text-indigo-800">Criterios Generales para la Evaluación y Calificación <span class="text-xs font-normal text-gray-500 italic">(No es obligatorio rellenar. Si se deja vacío se usará el texto predefinido. Si se rellena, la IA complementará, modificará o sustituirá el predefinido).</span></label>
+                        <textarea id="customGradingCriteria" class="w-full border rounded p-2 h-32" placeholder="Ej: En mi departamento ponderaremos los exámenes un 60% y el resto un 40%..."></textarea>
+                    </div>
+
+                    <div class="border-2 border-indigo-200 rounded-lg p-4 bg-indigo-50">
+                        <label class="block text-base font-bold mb-2 text-indigo-800">Indicaciones para Recuperación de la materia pendiente de curso anterior <span class="text-xs font-normal text-gray-500 italic">(No es obligatorio rellenar. Si se deja vacío se usará el texto predefinido. Si se rellena, la IA complementará, modificará o sustituirá el predefinido).</span></label>
+                        <textarea id="customRecoveryCriteria" class="w-full border rounded p-2 h-32" placeholder="Ej: Los alumnos con la materia pendiente entregarán un cuadernillo en febrero y harán un examen en mayo..."></textarea>
+                    </div>
+                    
+                    <div class="text-center pt-4">
+                        <button onclick="generateCommonPart()" class="bg-indigo-600 hover:bg-indigo-700 text-white py-3 px-8 rounded-lg shadow font-bold transition">
+                            <i class="fas fa-file-export mr-2"></i> Generar Parte Común con IA
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- PESTAÑA 3: DISEÑADOR SdA / UD -->
+        <div id="tab3" class="tab-content">
+            <div class="bg-white p-6 rounded-lg shadow-md border-t-4 border-green-500 mb-6">
+                <h2 class="text-lg font-semibold text-blue-900 border-b pb-2 mb-4"><i class="fas fa-file-pdf mr-2"></i> 1. Carga de Currículo Oficial (PDF)</h2>
+                <div class="flex flex-col md:flex-row gap-4 items-end">
+                    <div class="flex-grow">
+                        <label class="block text-sm font-medium mb-1">Subir archivo PDF del currículo</label>
+                        <input type="file" id="pdfUpload" accept=".pdf" class="w-full border rounded p-2 bg-gray-50">
+                    </div>
+                    <button onclick="processPDF()" id="btnProcessPDF" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded shadow transition font-semibold">Analizar y Buscar Asignaturas</button>
+                </div>
+                
+                <div id="subjectSelectionArea" class="mt-6 hidden border-t pt-4">
+                    <label class="block text-sm font-medium mb-1 text-blue-800">Selecciona la Asignatura encontrada:</label>
+                    <div class="flex gap-4">
+                        <select id="subjectSelect" class="flex-grow border rounded p-2" onchange="updatePrintLayouts()"></select>
+                        <button onclick="generateSubjectSummary()" id="btnGenSummary" class="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2 rounded shadow transition font-semibold">Extraer Currículo</button>
+                    </div>
+                </div>
+
+                <div id="summaryArea" class="mt-6 hidden bg-gray-50 p-4 rounded-lg border border-gray-200">
+                    <h3 class="font-bold text-gray-700 mb-2"><i class="fas fa-list-alt mr-2"></i> Resumen Curricular Base</h3>
+                    <div id="summaryContent" class="text-xs prose max-w-none text-gray-600 h-64 overflow-y-auto bg-white p-3 rounded border custom-scrollbar"></div>
+                </div>
+            </div>
+
+            <div id="sdaCreatorPanel" class="bg-white p-6 rounded-lg shadow-md hidden border-t-4 border-green-500">
+                <h2 class="text-2xl font-bold text-green-800 mb-2"><i class="fas fa-layer-group mr-2"></i> 2. Diseñador de SdA y Unidades Didácticas</h2>
+                <p class="text-sm text-gray-600 mb-6">Configura los parámetros para crear tu Situación de Aprendizaje o Unidad Didáctica.</p>
+                
+                <div class="space-y-6 mb-6">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium mb-1">Título de la Programación <span class="text-xs font-normal text-gray-500 italic">(No es obligatorio rellenar. Si se deja vacío la IA actuará a su criterio.)</span></label>
+                            <input type="text" id="docTitle" class="w-full border rounded p-2" placeholder="Ej: Programación Didáctica Biología 1º ESO" onkeyup="updatePrintLayouts()">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium mb-1">Profesorado de la Asignatura <span class="text-xs font-normal text-gray-500 italic">(No es obligatorio rellenar. Si se deja vacío la IA actuará a su criterio.)</span></label>
+                            <input type="text" id="docTeachers" class="w-full border rounded p-2" placeholder="Ej: Juan Pérez Gómez" onkeyup="updatePrintLayouts()">
+                        </div>
+                    </div>
+
+                    <div class="border-2 border-blue-500 rounded-lg p-4 shadow-sm bg-blue-50">
+                        <label class="block text-base font-bold mb-2 text-blue-800">Criterios de Evaluación a trabajar</label>
+                        <div id="criteriaContainer" class="border rounded p-3 h-56 overflow-y-auto bg-white custom-scrollbar space-y-2 text-sm text-gray-700 shadow-inner"></div>
+                    </div>
+
+                    <div class="border-2 border-blue-500 rounded-lg p-4 shadow-sm bg-blue-50">
+                        <label class="block text-base font-bold mb-2 text-blue-800">Descripción / Temática</label>
+                        <textarea id="sdaIdea" class="w-full border rounded p-2 h-28 focus:ring focus:ring-green-200 text-base" placeholder="Ej: Proyecto de investigación sobre ecosistemas locales..."></textarea>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium mb-1 text-blue-800">Aula Digital disponible <span class="text-xs font-normal text-gray-500 italic">(No es obligatorio rellenar. Si se deja vacío la IA actuará a su criterio.)</span></label>
+                        <input type="text" id="digitalClassroom" class="w-full border rounded p-2 focus:ring focus:ring-green-200 mb-2" placeholder="Ej: Classroom, Moodle, Teams, etc.">
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium mb-1 text-blue-800">Relación con otras materias, proyectos o entorno <span class="text-xs font-normal text-gray-500 italic">(No es obligatorio rellenar. Si se deja vacío la IA actuará a su criterio.)</span></label>
+                        <textarea id="sdaRelations" class="w-full border rounded p-2 h-24 focus:ring focus:ring-green-200 mb-4" placeholder="Ej: Proyecto interdisciplinar con Geografía e Historia..."></textarea>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium mb-1 text-blue-800">Elementos Transversales a trabajar <span class="text-xs font-normal text-gray-500 italic">(No es obligatorio rellenar. Si se deja vacío la IA actuará a su criterio.)</span></label>
+                        <div class="bg-white border rounded p-3 h-40 overflow-y-auto text-sm space-y-1 custom-scrollbar shadow-inner mb-2" id="transversalElements">
+                            <label class="flex items-center space-x-2"><input type="checkbox" value="Educación para la Salud" class="form-checkbox text-blue-600"> <span>Educación para la Salud</span></label>
+                            <label class="flex items-center space-x-2"><input type="checkbox" value="Educación Ambiental y desarrollo sostenible" class="form-checkbox text-blue-600"> <span>Educación Ambiental y desarrollo sostenible</span></label>
+                            <label class="flex items-center space-x-2"><input type="checkbox" value="Igualdad de género" class="form-checkbox text-blue-600"> <span>Igualdad de género</span></label>
+                            <label class="flex items-center space-x-2"><input type="checkbox" value="Educación Vial" class="form-checkbox text-blue-600"> <span>Educación Vial</span></label>
+                            <label class="flex items-center space-x-2"><input type="checkbox" value="Convivencia" class="form-checkbox text-blue-600"> <span>Convivencia</span></label>
+                            <label class="flex items-center space-x-2"><input type="checkbox" value="Educación Cívica" class="form-checkbox text-blue-600"> <span>Educación Cívica</span></label>
+                            <label class="flex items-center space-x-2"><input type="checkbox" value="Interculturalidad" class="form-checkbox text-blue-600"> <span>Interculturalidad</span></label>
+                            <label class="flex items-center space-x-2"><input type="checkbox" value="Buen uso de las TIC" class="form-checkbox text-blue-600"> <span>Buen uso de las TIC</span></label>
+                            <label class="flex items-center space-x-2"><input type="checkbox" value="Paz y solidaridad" class="form-checkbox text-blue-600"> <span>Paz y solidaridad</span></label>
+                            <label class="flex items-center space-x-2"><input type="checkbox" value="Atención a la diversidad" class="form-checkbox text-blue-600"> <span>Atención a la diversidad</span></label>
+                            <label class="flex items-center space-x-2"><input type="checkbox" value="Consumo responsable" class="form-checkbox text-blue-600"> <span>Consumo responsable</span></label>
+                        </div>
+                        <input type="text" id="customTransversal" placeholder="Otras elementos transversales..." class="w-full border rounded p-2 text-sm">
+                    </div>
+
+                    <div class="bg-gray-50 p-4 rounded border space-y-4">
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium mb-1">Nº Sesiones Totales</label>
+                                <select id="sdaSessions" class="w-full border rounded p-2">
+                                    <script>for(let i=1;i<=30;i++) document.write(`<option value="${i}" ${i==8?'selected':''}>${i}</option>`);</script>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium mb-1">Sesiones/Semana</label>
+                                <input type="number" id="sdaSessionsWeek" min="1" max="10" value="3" class="w-full border rounded p-2">
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium mb-1">Trimestre</label>
+                            <select id="sdaTrimester" class="w-full border rounded p-2">
+                                <option value="Primer Trimestre">Primer Trimestre</option>
+                                <option value="Primer y Segundo Trimestre">Primer y Segundo Trimestre</option>
+                                <option value="Segundo Trimestre">Segundo Trimestre</option>
+                                <option value="Segundo y Tercer Trimestre">Segundo y Tercer Trimestre</option>
+                                <option value="Tercer Trimestre">Tercer Trimestre</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium mb-1">Agrupamientos principales</label>
+                            <select id="sdaGrouping" class="w-full border rounded p-2">
+                                <option value="Combinación de Trabajo Individual y Grupal">Ambos (Individual y Grupal)</option>
+                                <option value="Trabajo Individual">Individual</option>
+                                <option value="Trabajo en Pequeños Grupos">Grupal</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="space-y-2 flex flex-col">
+                        <label class="block text-sm font-medium mb-1 text-blue-800">Instrumentos y Herramientas de Evaluación <span class="text-xs font-normal text-gray-500 italic">(No es obligatorio rellenar. Si se deja vacío la IA actuará a su criterio.)</span></label>
+                        <p class="text-xs text-gray-500 mb-1">Se exigirán mínimo 2 instrumentos por criterio.</p>
+                        <div class="bg-white border rounded p-3 h-72 overflow-y-auto text-sm space-y-2 custom-scrollbar shadow-inner" id="evalInstruments">
+                            <div class="flex items-center space-x-2"><input type="checkbox" value="Examen escrito" class="form-checkbox text-blue-600 mt-1"><span class="flex-grow">Examen escrito</span><select class="text-xs border rounded p-1 w-32"><option value="">Herramienta...</option><option>Rúbrica</option><option>Lista de cotejo</option><option>Escala de valoración</option><option>Registro anecdótico</option><option>Otro</option></select></div>
+                            <div class="flex items-center space-x-2"><input type="checkbox" value="Examen oral" class="form-checkbox text-blue-600 mt-1"><span class="flex-grow">Examen oral</span><select class="text-xs border rounded p-1 w-32"><option value="">Herramienta...</option><option>Rúbrica</option><option>Lista de cotejo</option><option>Escala de valoración</option><option>Registro anecdótico</option><option>Otro</option></select></div>
+                            <div class="flex items-center space-x-2"><input type="checkbox" value="Portafolios" class="form-checkbox text-blue-600 mt-1"><span class="flex-grow">Portafolios</span><select class="text-xs border rounded p-1 w-32"><option value="">Herramienta...</option><option>Rúbrica</option><option>Lista de cotejo</option><option>Escala de valoración</option><option>Registro anecdótico</option><option>Otro</option></select></div>
+                            <div class="flex items-center space-x-2"><input type="checkbox" value="Trabajo escrito" class="form-checkbox text-blue-600 mt-1"><span class="flex-grow">Trabajo escrito</span><select class="text-xs border rounded p-1 w-32"><option value="">Herramienta...</option><option>Rúbrica</option><option>Lista de cotejo</option><option>Escala de valoración</option><option>Registro anecdótico</option><option>Otro</option></select></div>
+                            <div class="flex items-center space-x-2"><input type="checkbox" value="Exposición" class="form-checkbox text-blue-600 mt-1"><span class="flex-grow">Exposición</span><select class="text-xs border rounded p-1 w-32"><option value="">Herramienta...</option><option>Rúbrica</option><option>Lista de cotejo</option><option>Escala de valoración</option><option>Registro anecdótico</option><option>Otro</option></select></div>
+                            <div class="flex items-center space-x-2"><input type="checkbox" value="Presentación" class="form-checkbox text-blue-600 mt-1"><span class="flex-grow">Presentación</span><select class="text-xs border rounded p-1 w-32"><option value="">Herramienta...</option><option>Rúbrica</option><option>Lista de cotejo</option><option>Escala de valoración</option><option>Registro anecdótico</option><option>Otro</option></select></div>
+                        </div>
+                        <div><input type="text" id="customInstrument" placeholder="Otro instrumento... (escribe aquí)" class="w-full border rounded p-2 text-sm mt-1"></div>
+                    </div>
+                </div>
+
+                <div class="flex flex-col gap-4 border-t pt-4">
+                    <button onclick="generateIntro()" class="bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg shadow font-bold transition flex justify-center items-center">
+                        <i class="fas fa-file-import mr-2"></i> Crear Parte de Introducción
+                    </button>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <button onclick="generateSingleSDA(false)" class="bg-green-600 hover:bg-green-700 text-white py-3 rounded-lg shadow font-bold transition flex justify-center items-center">
+                            <i class="fas fa-plus-circle mr-2"></i> Generar SdA
+                        </button>
+                        <button onclick="generateSingleSDA(true)" class="bg-teal-600 hover:bg-teal-700 text-white py-3 rounded-lg shadow font-bold transition flex justify-center items-center">
+                            <i class="fas fa-book mr-2"></i> Generar Unidad Didáctica
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- PESTAÑA 4: PROGRAMACIÓN CURSO COMPLETO -->
+        <div id="tab4" class="tab-content">
+            <div class="bg-white p-6 rounded-lg shadow-md border-t-4 border-purple-500 mb-6">
+                <h2 class="text-lg font-semibold text-blue-900 border-b pb-2 mb-4"><i class="fas fa-file-pdf mr-2"></i> 1. Carga de Currículo Oficial (PDF)</h2>
+                <div class="flex flex-col md:flex-row gap-4 items-end">
+                    <div class="flex-grow">
+                        <label class="block text-sm font-medium mb-1">Subir archivo PDF del currículo</label>
+                        <input type="file" id="pdfUploadFull" accept=".pdf" class="w-full border rounded p-2 bg-gray-50">
+                    </div>
+                    <button onclick="processPDFFull()" id="btnProcessPDFFull" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded shadow transition font-semibold">Analizar y Buscar Asignaturas</button>
+                </div>
+                
+                <div id="subjectSelectionAreaFull" class="mt-6 hidden border-t pt-4">
+                    <label class="block text-sm font-medium mb-1 text-blue-800">Selecciona la Asignatura encontrada:</label>
+                    <div class="flex gap-4">
+                        <select id="subjectSelectFull" class="flex-grow border rounded p-2" onchange="updatePrintLayouts()"></select>
+                        <button onclick="generateSubjectSummaryFull()" id="btnGenSummaryFull" class="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2 rounded shadow transition font-semibold">Extraer Currículo</button>
+                    </div>
+                </div>
+
+                <div id="summaryAreaFull" class="mt-6 hidden bg-gray-50 p-4 rounded-lg border border-gray-200">
+                    <h3 class="font-bold text-gray-700 mb-2"><i class="fas fa-list-alt mr-2"></i> Resumen Curricular Base</h3>
+                    <div id="summaryContentFull" class="text-xs prose max-w-none text-gray-600 h-64 overflow-y-auto bg-white p-3 rounded border custom-scrollbar"></div>
+                </div>
+            </div>
+
+            <div id="fullCourseCreatorPanel" class="bg-white p-6 rounded-lg shadow-md hidden border-t-4 border-purple-500">
+                <h2 class="text-2xl font-bold text-purple-800 mb-2"><i class="fas fa-calendar-alt mr-2"></i> 2. Programación del Curso Completo</h2>
+                <p class="text-sm text-gray-600 mb-6">Indica los aspectos importantes para programar el curso completo. La IA generará la introducción y todas las situaciones de aprendizaje de forma automática.</p>
+                
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                    <div>
+                        <label class="block text-sm font-medium mb-1">Profesorado de la Asignatura <span class="text-xs font-normal text-gray-500 italic">(No es obligatorio)</span></label>
+                        <input type="text" id="docTeachersFull" class="w-full border rounded p-2" placeholder="Ej: Juan Pérez Gómez" onkeyup="document.getElementById('docTeachers').value = this.value; updatePrintLayouts();">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-1">Sesiones por semana</label>
+                        <select id="courseSessionsWeek" class="w-full border rounded p-2">
+                            <option value="1">1</option>
+                            <option value="2" selected>2</option>
+                            <option value="3">3</option>
+                            <option value="4">4</option>
+                            <option value="5">5</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-1">Semanas totales en el curso</label>
+                        <input type="number" id="courseTotalWeeks" min="20" max="40" value="32" class="w-full border rounded p-2">
+                    </div>
+                </div>
+
+                <div class="mb-4">
+                    <label class="block text-sm font-medium mb-1">Indicaciones para la IA <span class="text-xs font-normal text-gray-500 italic">(No es obligatorio rellenar. Si se deja vacío la IA actuará a su criterio.)</span></label>
+                    <textarea id="fullCourseInstructions" class="w-full border rounded p-2 h-40" placeholder="Ej: Distribuye los criterios en 6 SdA. Intenta que la mitad sean proyectos prácticos y la mitad investigaciones teóricas..."></textarea>
+                </div>
+                
+                <button onclick="generateFullCourse()" class="w-full bg-purple-600 hover:bg-purple-700 text-white py-3 rounded-lg shadow font-bold transition flex justify-center items-center">
+                    <i class="fas fa-magic mr-2"></i> Generar Programación Completa con IA
+                </button>
+            </div>
+        </div>
+
+        <!-- PESTAÑA 5: RESUMEN -->
+        <div id="tab5" class="tab-content">
+            <div class="bg-white p-6 rounded-lg shadow-md border-t-4 border-purple-500 text-center">
+                <h2 class="text-2xl font-bold text-purple-800 mb-2"><i class="fas fa-table mr-2"></i> Cuadro Resumen de Programación</h2>
+                <p class="text-sm text-gray-600 mb-6">Genera un documento con dos tablas resumen: una ordenada por criterios y otra ordenada por Situaciones de Aprendizaje.</p>
+                <button onclick="generateResumenDoc()" class="bg-purple-600 hover:bg-purple-700 text-white py-3 px-8 rounded-lg shadow font-bold transition">
+                    <i class="fas fa-file-export mr-2"></i> Generar Documento Resumen
+                </button>
+            </div>
+        </div>
+
+        <!-- PESTAÑA 6: SEGUIMIENTO -->
+        <div id="tab6" class="tab-content">
+            <div class="bg-white p-6 rounded-lg shadow-md border-t-4 border-purple-500 text-center">
+                <h2 class="text-2xl font-bold text-purple-800 mb-2"><i class="fas fa-tasks mr-2"></i> Seguimiento de Programación</h2>
+                <p class="text-sm text-gray-600 mb-6">Genera un documento editable con todas las sesiones del curso para llevar un control de fechas y observaciones.</p>
+                <button onclick="generateTrackingDoc()" class="bg-purple-600 hover:bg-purple-700 text-white py-3 px-8 rounded-lg shadow font-bold transition">
+                    <i class="fas fa-file-export mr-2"></i> Generar Documento de Seguimiento
+                </button>
+            </div>
+        </div>
+
+    </div> <!-- End No Print Container -->
+
+    <!-- PESTAÑA 7: VISTA PREVIA PARTE COMÚN -->
+    <div id="tab7" class="tab-content">
+        <div class="bg-gray-100 p-4 no-print">
+            <div class="container mx-auto flex justify-end gap-2 mb-4">
+                <button onclick="printDocument('printable-area-common')" class="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded shadow transition"><i class="fas fa-print mr-1"></i> Imprimir</button>
+                <button onclick="downloadAsDoc('printable-area-common')" class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded shadow transition"><i class="fas fa-file-word mr-1"></i> Descargar Word/Writer</button>
+            </div>
+        </div>
+        
+        <div id="printable-area-common" class="container mx-auto p-4 md:p-8 text-gray-800">
+            <div class="print-cover mb-12 text-center mt-10">
+                <div id="displayCenterCommon" class="text-lg md:text-xl font-semibold text-gray-700 uppercase tracking-wide"></div>
+                <h1 class="text-2xl md:text-4xl font-extrabold uppercase tracking-wider text-blue-900 my-3">PROGRAMACIÓN DIDÁCTICA</h1>
+                <div id="displayDeptCommon" class="text-base md:text-lg italic text-gray-600"></div>
+                <div class="border-b-4 border-blue-900 mt-6 w-1/2 mx-auto"></div>
+            </div>
+            <div id="commonContainer" class="space-y-4">
+                <div class="text-center text-gray-400 py-20 italic">Genere la parte común desde la Pestaña 2.</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- PESTAÑA 8: VISTA PREVIA PROGRAMACIÓN DE MATERIA -->
+    <div id="tab8" class="tab-content">
+        <div class="bg-gray-100 p-4 no-print">
+            <div class="container mx-auto flex justify-end gap-2 mb-4">
+                <button onclick="printDocument('printable-area-sda')" class="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded shadow transition"><i class="fas fa-print mr-1"></i> Imprimir</button>
+                <button onclick="downloadAsDoc('printable-area-sda')" class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded shadow transition"><i class="fas fa-file-word mr-1"></i> Descargar Word/Writer</button>
+            </div>
+        </div>
+
+        <div id="printable-area-sda" class="container mx-auto p-4 md:p-8 text-gray-800">
+            <div class="print-cover mb-12 text-center mt-10">
+                <div id="displayCenterSDA" class="text-lg md:text-xl font-semibold text-gray-700 uppercase tracking-wide"></div>
+                <h1 id="displayTitleSDA" class="text-2xl md:text-4xl font-extrabold uppercase tracking-wider text-blue-900 my-3">PROGRAMACIÓN DE AULA</h1>
+                <div id="displayTeachersSDA" class="text-base md:text-lg italic text-gray-600"></div>
+                <div class="border-b-4 border-blue-900 mt-6 w-1/2 mx-auto"></div>
+            </div>
+            
+            <div id="introContainer" class="space-y-4"></div>
+
+            <div id="sdasList" class="space-y-4">
+                <div id="emptyState" class="text-center text-gray-400 py-20 italic">Las Situaciones de Aprendizaje o Unidades Didácticas generadas aparecerán aquí.</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- PESTAÑA 9: VISTA PREVIA DOCUMENTO RESUMEN -->
+    <div id="tab9" class="tab-content">
+        <div class="bg-gray-100 p-4 no-print">
+            <div class="container mx-auto flex justify-end gap-2 mb-4">
+                <button onclick="printDocument('printable-area-resumen')" class="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded shadow transition"><i class="fas fa-print mr-1"></i> Imprimir</button>
+                <button onclick="downloadAsDoc('printable-area-resumen')" class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded shadow transition"><i class="fas fa-file-word mr-1"></i> Descargar Word/Writer</button>
+            </div>
+        </div>
+
+        <div id="printable-area-resumen" class="container mx-auto p-4 md:p-8 text-gray-800">
+            <div class="print-cover mb-12 text-center mt-10">
+                <div id="displayCenterResumen" class="text-lg md:text-xl font-semibold text-gray-700 uppercase tracking-wide"></div>
+                <h1 class="text-2xl md:text-4xl font-extrabold uppercase tracking-wider text-blue-900 my-3">CUADRO RESUMEN DE PROGRAMACIÓN</h1>
+                <div id="displayDeptResumen" class="text-base md:text-lg italic text-gray-600"></div>
+                <div class="border-b-4 border-blue-900 mt-6 w-1/2 mx-auto"></div>
+            </div>
+            <div id="resumenContainer" class="space-y-4">
+                <div class="text-center text-gray-400 py-20 italic">Genere el documento desde la Pestaña 5.</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- PESTAÑA 10: VISTA PREVIA DOCUMENTO DE SEGUIMIENTO -->
+    <div id="tab10" class="tab-content">
+        <div class="bg-gray-100 p-4 no-print">
+            <div class="container mx-auto flex justify-end gap-2 mb-4">
+                <button onclick="printDocument('printable-area-tracking')" class="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded shadow transition"><i class="fas fa-print mr-1"></i> Imprimir</button>
+                <button onclick="downloadAsDoc('printable-area-tracking')" class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded shadow transition"><i class="fas fa-file-word mr-1"></i> Descargar Word/Writer</button>
+            </div>
+        </div>
+
+        <div id="printable-area-tracking" class="container mx-auto p-4 md:p-8 text-gray-800">
+            <div class="print-cover mb-12 text-center mt-10">
+                <div id="displayCenterTracking" class="text-lg md:text-xl font-semibold text-gray-700 uppercase tracking-wide"></div>
+                <h1 class="text-2xl md:text-4xl font-extrabold uppercase tracking-wider text-blue-900 my-3">SEGUIMIENTO DE PROGRAMACIÓN</h1>
+                <div id="displayDeptTracking" class="text-base md:text-lg italic text-gray-600"></div>
+                <div class="border-b-4 border-blue-900 mt-6 w-1/2 mx-auto"></div>
+            </div>
+            <div id="trackingContainer" class="space-y-4">
+                <div class="text-center text-gray-400 py-20 italic">Genere el documento desde la Pestaña de Seguimiento.</div>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- JAVASCRIPT LOGIC -->
+    <script>
+        const defaultGradingCriteria = `
+            <h4>7.1. Evidencias y Calificación de los Criterios</h4>
+            <p>El grado de desarrollo y adquisición de las competencias clave y de los saberes básicos de la asignatura se evidenciará en la evaluación de los criterios de evaluación establecidos en el currículo oficial. Así, parte de los productos resultantes del trabajo del alumnado se constituirán en instrumentos de evaluación, se calificarán en una escala de 0 a 10 puntos y permitirán así mismo la evaluación y calificación de los criterios de evaluación asociados.</p>
+            <h4>7.2. Cálculo de Calificaciones por Evaluación</h4>
+            <p>La nota de la 1a evaluación se corresponderá con la media aritmética de la calificación obtenida en cada uno de los criterios trabajados en dicha evaluación, ponderándose aquellos criterios de evaluación que no fueran trabajados en su totalidad. La nota de la 2a evaluación se corresponderá con la media aritmética de la calificación obtenida en cada uno de los criterios trabajados en el semestre, ponderándose aquellos criterios de evaluación que no fueran trabajados en su totalidad. La nota de la evaluación final se corresponderá con la media aritmética de la calificación obtenida en cada uno de los criterios trabajados durante todo el curso.</p>
+            <h4>7.3. Superación de la Asignatura y Redondeo de Calificaciones</h4>
+            <p>Un criterio se considerará superado cuando la calificación obtenida por el alumno sea igual o superior al 5. Para aprobar la asignatura se precisará una calificación igual o superior a cinco puntos sobre diez. Las calificaciones decimales en la primera y segunda evaluación podrán ser redondeadas al entero más próximo o al entero inmediatamente más bajo. En la evaluación final se redondearán las calificaciones finales si son decimales al entero más próximo.</p>
+            <h4>7.4. Pérdida del Derecho a la Evaluación Continua</h4>
+            <p>En el caso de alumnado que perdiera el derecho a la evaluación continua a lo largo del curso se valorará por parte del Departamento Didáctico si, a tenor de las circunstancias de cada alumno o alumna, se le otorga la posibilidad de retomar la evaluación continua o no. En caso negativo el departamento podrá optar por la realización de una prueba objetiva única que comprenda todo el contenido de la materia o bien solicitar un trabajo o proyecto único que igualmente comprenda todo el contenido de la materia. Tendrá especial peso en estas decisiones el abandono o no de la asignatura por parte del alumno o alumna, la concurrencia de otras causas ajenas a su voluntad y el avance temporal del curso. Como alternativa el departamento podrá tomar como decisión mantener la evaluación y calificación de los contenidos trabajados hasta la fecha de la pérdida de derecho a evaluación continua y proponer una prueba objetiva única o trabajo/proyecto que comprenda los contenidos restantes de la asignatura.</p>
+        `;
+
+        const defaultRecoveryText = `<p>El alumnado que tiene pendiente una materia del curso anterior por haber promocionado dentro de la etapa y que supere la materia de continuidad a ella tendrá dicha materia superada. En caso de que no supere la materia de continuidad o no exista materia de continuidad tendrá que realizar en tiempo y forma el plan de recuperación de materia pendiente que le proponga el departamento didáctico. La superación o no de la materia pendiente se establecerá en la evaluación final.</p>`;
+
+        const descriptorsData = `
+        Descriptores operativos de las competencias clave para ESO y Bachillerato:
+        Competencia en comunicación lingüística (CCL)
+        ESO:
+        CCL1. Se expresa de forma oral, escrita, signada o multimodal con coherencia, corrección y adecuación a los diferentes contextos sociales, y participa en interacciones comunicativas con actitud cooperativa y respetuosa tanto para intercambiar información, crear conocimiento y transmitir opiniones, como para construir vínculos personales.
+        CCL2. Comprende, interpreta y valora con actitud crítica textos orales, escritos, signados o multimodales de los ámbitos personal, social, educativo y profesional para participar en diferentes contextos de manera activa e informada y para construir conocimiento.
+        CCL3. Localiza, selecciona y contrasta de manera progresivamente autónoma información procedente de diferentes fuentes, evaluando su fiabilidad y pertinencia en función de los objetivos de lectura y evitando los riesgos de manipulación y desinformación, y la integra y transforma en conocimiento para comunicarla adoptando un punto de vista creativo, crítico y personal a la par que respetuoso con la propiedad intelectual.
+        CCL4. Lee con autonomía obras diversas adecuadas a su edad, seleccionando las que mejor se ajustan a sus gustos e intereses; aprecia el patrimonio literario como cauce privilegiado de la experiencia individual y colectiva; y moviliza su propia experiencia biográfica y sus conocimientos literarios y culturales para construir y compartir su interpretación de las obras y para crear textos de intención literaria de progresiva complejidad.
+        CCL5. Pone sus prácticas comunicativas al servicio de la convivencia democrática, la resolución dialogada de los conflictos y la igualdad de derechos de todas las personas, evitando los usos discriminatorios, así como los abusos de poder, para favorecer la utilización no solo eficaz sino también ética de los diferentes sistemas de comunicación.
+        Bachillerato:
+        CCL1. Se expresa de forma oral, escrita, signada o multimodal con fluidez, coherencia, corrección y adecuación a los diferentes contextos sociales y académicos, y participa en interacciones comunicativas con actitud cooperativa y respetuosa tanto para intercambiar información, crear conocimiento y argumentar sus opiniones como para establecer y cuidar sus relaciones interpersonales.
+        CCL2. Comprende, interpreta y valora con actitud crítica textos orales, escritos, signados o multimodales de los distintos ámbitos, con especial énfasis en los textos académicos y de los medios de comunicación, para participar en diferentes contextos de manera activa e informada y para construir conocimiento.
+        CCL3. Localiza, selecciona y contrasta de manera autónoma información procedente de diferentes fuentes evaluando su fiabilidad y pertinencia en función de los objetivos de lectura y evitando los riesgos de manipulación y desinformación, y la integra y transforma en conocimiento para comunicarla de manera clara y rigurosa adoptando un punto de vista creativo y crítico a la par que respetuoso con la propiedad intelectual.
+        CCL4. Lee con autonomía obras relevantes de la literatura poniéndolas en relación con su contexto sociohistórico de producción, con la tradición literaria anterior y posterior y examinando la huella de su legado en la actualidad, para construir y compartir su propia interpretación argumentada de las obras, crear y recrear obras de intención literaria y conformar progresivamente un mapa cultural.
+        CCL5. Pone sus prácticas comunicativas al servicio de la convivencia democrática, la resolución dialogada de los conflictos y la igualdad de derechos de todas las personas, evitando y rechazando los usos discriminatorios, así como los abusos de poder, para favorecer la utilización no solo eficaz sino también ética de los diferentes sistemas de comunicación.
+
+        Competencia plurilingüe (CP)
+        ESO:
+        CP1. Usa eficazmente una o más lenguas, además de la lengua o lenguas familiares, para responder a sus necesidades comunicativas, de manera apropiada y adecuada tanto a su desarrollo e intereses como a diferentes situaciones y contextos de los ámbitos personal, social, educativo y profesional.
+        CP2. A partir de sus experiencias, realiza transferencias entre distintas lenguas como estrategia para comunicarse y ampliar su repertorio lingüístico individual.
+        CP3. Conoce, valora y respeta la diversidad lingüística y cultural presente en la sociedad, integrándola en su desarrollo personal como factor de diálogo, para fomentar la cohesión social.
+        Bachillerato:
+        CP1. Utiliza con fluidez, adecuación y aceptable corrección una o más lenguas, además de la lengua familiar o de las lenguas familiares, para responder a sus necesidades comunicativas con espontaneidad y autonomía en diferentes situaciones y contextos de los ámbitos personal, social, educativo y profesional.
+        CP2. A partir de sus experiencias, desarrolla estrategias que le permitan ampliar y enriquecer de forma sistemática su repertorio lingüístico individual con el fin de comunicarse de manera eficaz.
+        CP3. Conoce y valora críticamente la diversidad lingüística y cultural presente en la sociedad, integrándola en su desarrollo personal y anteponiendo la comprensión mutua como característica central de la comunicación, para fomentar la cohesión social.
+
+        Competencia matemática y competencia en ciencia, tecnología e ingeniería (STEM)
+        ESO:
+        STEM1. Utiliza métodos inductivos y deductivos propios del razonamiento matemático en situaciones conocidas, y selecciona y emplea diferentes estrategias para resolver problemas analizando críticamente las soluciones y reformulando el procedimiento, si fuera necesario.
+        STEM2. Utiliza el pensamiento científico para entender y explicar los fenómenos que ocurren a su alrededor, confiando en el conocimiento como motor de desarrollo, planteándose preguntas y comprobando hipótesis mediante la experimentación y la indagación, utilizando herramientas e instrumentos adecuados, apreciando la importancia de la precisión y la veracidad y mostrando una actitud crítica acerca del alcance y las limitaciones de la ciencia.
+        STEM3. Plantea y desarrolla proyectos diseñando, fabricando y evaluando diferentes prototipos o modelos para generar o utilizar productos que den solución a una necesidad o problema de forma creativa y en equipo, procurando la participación de todo el grupo, resolviendo pacíficamente los conflictos que puedan surgir, adaptándose ante la incertidumbre y valorando la importancia de la sostenibilidad.
+        STEM4. Interpreta y transmite los elementos más relevantes de procesos, razonamientos, demostraciones, métodos y resultados científicos, matemáticos y tecnológicos de forma clara y precisa y en diferentes formatos (gráficos, tablas, diagramas, fórmulas, esquemas, símbolos...), aprovechando de forma crítica la cultura digital e incluyendo el lenguaje matemático-formal con ética y responsabilidad, para compartir y construir nuevos conocimientos.
+        STEM5. Emprende acciones fundamentadas científicamente para promover la salud física, mental y social, y preservar el medio ambiente y los seres vivos; y aplica principios de ética y seguridad en la realización de proyectos para transformar su entorno próximo de forma sostenible, valorando su impacto global y practicando el consumo responsable.
+        Bachillerato:
+        STEM1. Selecciona y utiliza métodos inductivos y deductivos propios del razonamiento matemático en situaciones propias de la modalidad elegida y emplea estrategias variadas para la resolución de problemas analizando críticamente las soluciones y reformulando el procedimiento, si fuera necesario.
+        STEM2. Utiliza el pensamiento científico para entender y explicar fenómenos relacionados con la modalidad elegida, confiando en el conocimiento como motor de desarrollo, planteándose hipótesis y contrastándolas o comprobándolas mediante la observación, la experimentación y la investigación, utilizando herramientas e instrumentos adecuados, apreciando la importancia de la precisión y la veracidad y mostrando una actitud crítica acerca del alcance y limitaciones de los métodos empleados.
+        STEM3. Plantea y desarrolla proyectos diseñando y creando prototipos o modelos para generar o utilizar productos que den solución a una necesidad o problema de forma colaborativa, procurando la participación de todo el grupo, resolviendo pacíficamente los conflictos que puedan surgir, adaptándose ante la incertidumbre y evaluando el producto obtenido de acuerdo a los objetivos propuestos, la sostenibilidad y el impacto transformador en la sociedad.
+        STEM4. Interpreta y transmite los elementos más relevantes de investigaciones de forma clara y precisa, en diferentes formatos (gráficos, tablas, diagramas, fórmulas, esquemas, símbolos.) y aprovechando la cultura digital con ética y responsabilidad y valorando de forma crítica la contribución de la ciencia y la tecnología en el cambio de las condiciones de vida para compartir y construir nuevos conocimientos.
+        STEM5. Planea y emprende acciones fundamentadas científicamente para promover la salud física y mental, y preservar el medio ambiente y los seres vivos, practicando el consumo responsable, aplicando principios de ética y seguridad para crear valor y transformar su entorno de forma sostenible adquiriendo compromisos como ciudadano en el ámbito local y global.
+
+        Competencia digital (CD)
+        ESO:
+        CD1. Realiza búsquedas en internet atendiendo a criterios de validez, calidad, actualidad y fiabilidad, seleccionando los resultados de manera crítica y archivándolos, para recuperarlos, referenciarlos y reutilizarlos, respetando la propiedad intelectual.
+        CD2. Gestiona y utiliza su entorno personal digital de aprendizaje para construir conocimiento y crear contenidos digitales, mediante estrategias de tratamiento de la información y el uso de diferentes herramientas digitales, seleccionando y configurando la más adecuada en función de la tarea y de sus necesidades de aprendizaje permanente.
+        CD3. Se comunica, participa, colabora e interactúa compartiendo contenidos, datos e información mediante herramientas o plataformas virtuales, y gestiona de manera responsable sus acciones, presencia y visibilidad en la red, para ejercer una ciudadanía digital activa, cívica y reflexiva.
+        CD4. Identifica riesgos y adopta medidas preventivas al usar las tecnologías digitales para proteger los dispositivos, los datos personales, la salud y el medioambiente, y para tomar conciencia de la importancia y necesidad de hacer un uso crítico, legal, seguro, saludable y sostenible de dichas tecnologías.
+        CD5. Desarrolla aplicaciones informáticas sencillas y soluciones tecnológicas creativas y sostenibles para resolver problemas concretos o responder a retos propuestos, mostrando interés y curiosidad por la evolución de las tecnologías digitales y por su desarrollo sostenible y uso ético.
+        Bachillerato:
+        CD1. Realiza búsquedas avanzadas comprendiendo cómo funcionan los motores de búsqueda en internet aplicando criterios de validez, calidad, actualidad y fiabilidad, seleccionando los resultados de manera crítica y organizando el almacenamiento de la información de manera adecuada y segura para referenciarla y reutilizarla posteriormente.
+        CD2. Crea, integra y reelabora contenidos digitales de forma individual o colectiva, aplicando medidas de seguridad y respetando, en todo momento, los derechos de autoría digital para ampliar sus recursos y generar nuevo conocimiento.
+        CD3. Selecciona, configura y utiliza dispositivos digitales, herramientas, aplicaciones y servicios en línea y los incorpora en su entorno personal de aprendizaje digital para comunicarse, trabajar colaborativamente y compartir información, gestionando de manera responsable sus acciones, presencia y visibilidad en la red y ejerciendo una ciudadanía digital activa, cívica y reflexiva.
+        CD4. Evalúa riesgos y aplica medidas al usar las tecnologías digitales para proteger los dispositivos, los datos personales, la salud y el medioambiente y hace un uso crítico, legal, seguro, saludable y sostenible de dichas tecnologías.
+        CD5. Desarrolla soluciones tecnológicas innovadoras y sostenibles para dar respuesta a necesidades concretas, mostrando interés y curiosidad por la evolución de las tecnologías digitales y por su desarrollo sostenible y uso ético.
+
+        Competencia personal, social y de aprender a aprender (CPSAA)
+        ESO:
+        CPSAA1. Regula y expresa sus emociones, fortaleciendo el optimismo, la resiliencia, la autoeficacia y la búsqueda de propósito y motivación hacia el aprendizaje, para gestionar los retos y cambios y armonizarlos con sus propios objetivos.
+        CPSAA2. Comprende los riesgos para la salud relacionados con factores sociales, consolida estilos de vida saludable a nivel físico y mental, reconoce conductas contrarias a la convivencia y aplica estrategias para abordarlas.
+        CPSAA3. Comprende proactivamente las perspectivas y las experiencias de las demás personas y las incorpora a su aprendizaje, para participar en el trabajo en grupo, distribuyendo y aceptando tareas y responsabilidades de manera equitativa y empleando estrategias cooperativas.
+        CPSAA4. Realiza autoevaluaciones sobre su proceso de aprendizaje, buscando fuentes fiables para validar, sustentar y contrastar la información y para obtener conclusiones relevantes.
+        CPSAA5. Planea objetivos a medio plazo y desarrolla procesos metacognitivos de retroalimentación para aprender de sus errores en el proceso de construcción del conocimiento.
+        Bachillerato:
+        CPSAA1.1 Fortalece el optimismo, la resiliencia, la autoeficacia y la búsqueda de objetivos de forma autónoma para hacer eficaz su aprendizaje.
+        CPSAA1.2 Desarrolla una personalidad autónoma, gestionando constructivamente los cambios, la participación social y su propia actividad para dirigir su vida.
+        CPSAA2. Adopta de forma autónoma un estilo de vida sostenible y atiende al bienestar físico y mental propio y de los demás, buscando y ofreciendo apoyo en la sociedad para construir un mundo más saludable.
+        CPSAA3.1 Muestra sensibilidad hacia las emociones y experiencias de los demás, siendo consciente de la influencia que ejerce el grupo en las personas, para consolidar una personalidad empática e independiente y desarrollar su inteligencia.
+        CPSAA3.2 Distribuye en un grupo las tareas, recursos y responsabilidades de manera ecuánime, según sus objetivos, favoreciendo un enfoque sistémico para contribuir a la consecución de objetivos compartidos.
+        CPSAA4. Compara, analiza, evalúa y sintetiza datos, información e ideas de los medios de comunicación, para obtener conclusiones lógicas de forma autónoma, valorando la fiabilidad de las fuentes.
+        CPSAA5. Planifica a largo plazo evaluando los propósitos y los procesos de la construcción del conocimiento, relacionando los diferentes campos del mismo para desarrollar procesos autorregulados de aprendizaje que le permitan transmitir ese conocimiento, proponer ideas creativas y resolver problemas con autonomía.
+
+        Competencia ciudadana (CC)
+        ESO:
+        CC1. Analiza y comprende ideas relativas a la dimensión social y ciudadana de su propia identidad, así como a los hechos culturales, históricos y normativos que la determinan, demostrando respeto por las normas, empatía, equidad y espíritu constructivo en la interacción con los demás en cualquier contexto.
+        CC2. Analiza y asume fundadamente los principios y valores que emanan del proceso de integración europea, la Constitución española y los derechos humanos y de la infancia, participando en actividades comunitarias, como la toma de decisiones o la resolución de conflictos, con actitud democrática, respeto por la diversidad, y compromiso con la igualdad de género, la cohesión social, el desarrollo sostenible y el logro de la ciudadanía mundial.
+        CC3. Comprende y analiza problemas éticos fundamentales y de actualidad, considerando críticamente los valores propios y ajenos, y desarrollando juicios propios para afrontar la controversia moral con actitud dialogante, argumentativa, respetuosa y opuesta a cualquier tipo de discriminación o violencia.
+        CC4. Comprende las relaciones sistémicas de interdependencia, ecodependencia e interconexión entre actuaciones locales y globales, y adopta, de forma consciente y motivada, un estilo de vida sostenible y ecosocialmente responsable.
+        Bachillerato:
+        CC1. Analiza hechos, normas e ideas relativas a la dimensión social, histórica, cívica y moral de su propia identidad, para contribuir a la consolidación de su madurez personal y social, adquirir una conciencia ciudadana y responsable, desarrollar la autonomía y el espíritu crítico, y establecer una interacción pacífica y respetuosa con los demás y con el entorno.
+        CC2. Reconoce, analiza y aplica en diversos contextos, de forma crítica y consecuente, los principios, ideales y valores relativos al proceso de integración europea, la Constitución Española, los derechos humanos, y la historia y el patrimonio cultural propios, a la vez que participa en todo tipo de actividades grupales con una actitud fundamentada en los principios y procedimientos democráticos, el compromiso ético con la igualdad, la cohesión social, el desarrollo sostenible y el logro de la ciudadanía mundial.
+        CC3. Adopta un juicio propio y argumentado ante problemas éticos y filosóficos fundamentales y de actualidad, afrontando con actitud dialogante la pluralidad de valores, creencias e ideas, rechazando todo tipo de discriminación y violencia, y promoviendo activamente la igualdad y corresponsabilidad efectiva entre mujeres y hombres.
+        CC4. Analiza las relaciones de interdependencia y ecodependencia entre nuestras formas de vida y el entorno, realizando un análisis crítico de la huella ecológica de las acciones humanas, y demostrando un compromiso ético y ecosocialmente responsable con actividades y hábitos que conduzcan al logro de los Objetivos de Desarrollo Sostenible y la lucha contra el cambio climático.
+
+        Competencia emprendedora (CE)
+        ESO:
+        CE1. Analiza necesidades y oportunidades y afronta retos con sentido crítico, haciendo balance de su sostenibilidad, valorando el impacto que puedan suponer en el entorno, para presentar ideas y soluciones innovadoras, éticas y sostenibles, dirigidas a crear valor en el ámbito personal, social, educativo y profesional.
+        CE2. Evalúa las fortalezas y debilidades propias, haciendo uso de estrategias de autoconocimiento y autoeficacia, y comprende los elementos fundamentales de la economía y las finanzas, aplicando conocimientos económicos y financieros a actividades y situaciones concretas, utilizando destrezas que favorezcan el trabajo colaborativo y en equipo, para reunir y optimizar los recursos necesarios que lleven a la acción una experiencia emprendedora que genere valor.
+        CE3. Desarrolla el proceso de creación de ideas y soluciones valiosas y toma decisiones, de manera razonada, utilizando estrategias ágiles de planificación y gestión, y reflexiona sobre el proceso realizado y el resultado obtenido, para llevar a término el proceso de creación de prototipos innovadores y de valor, considerando la experiencia como una oportunidad para aprender.
+        Bachillerato:
+        CE1. Evalúa necesidades y oportunidades y afronta retos, con sentido crítico y ético, evaluando su sostenibilidad y comprobando, a partir de conocimientos técnicos específicos, el impacto que puedan suponer en el entorno, para presentar y ejecutar ideas y soluciones innovadoras dirigidas a distintos contextos, tanto locales como globales, en el ámbito personal, social y académico con proyección profesional emprendedora.
+        CE2. Evalúa y reflexiona sobre las fortalezas y debilidades propias y las de los demás, haciendo uso de estrategias de autoconocimiento y autoeficacia, interioriza los conocimientos económicos y financieros específicos y los transfiere a contextos locales y globales, aplicando estrategias y destrezas que agilicen el trabajo colaborativo y en equipo, para reunir y optimizar los recursos necesarios, que lleven a la acción una experiencia o iniciativa emprendedora de valor.
+        CE3. Lleva a cabo el proceso de creación de ideas y soluciones innovadoras y toma decisiones, con sentido crítico y ético, aplicando conocimientos técnicos específicos y estrategias ágiles de planificación y gestión de proyectos, y reflexiona sobre el proceso realizado y el resultado obtenido, para elaborar un prototipo final de valor para los demás, considerando tanto la experiencia de éxito como de fracaso, una oportunidad para aprender.
+
+        Competencia en conciencia y expresión culturales (CCEC)
+        ESO:
+        CCEC1. Conoce, aprecia críticamente y respeta el patrimonio cultural y artístico, implicándose en su conservación y valorando el enriquecimiento inherente a la diversidad cultural y artística.
+        CCEC2. Disfruta, reconoce y analiza con autonomía las especificidades e intencionalidades de las manifestaciones artísticas y culturales más destacadas del patrimonio, distinguiendo los medios y soportes, así como los lenguajes y elementos técnicos que las caracterizan.
+        CCEC3. Expresa ideas, opiniones, sentimientos y emociones por medio de producciones culturales y artísticas, integrando su propio cuerpo y desarrollando la autoestima, la creatividad y el sentido del lugar que ocupa en la sociedad, con una actitud empática, abierta y colaborativa.
+        CCEC4. Conoce, selecciona y utiliza con creatividad diversos medios y soportes, así como técnicas plásticas, visuales, audiovisuales, sonoras o corporales, para la creación de productos artísticos y culturales, tanto de forma individual como colaborativa, identificando oportunidades de desarrollo personal, social y laboral, así como de emprendimiento.
+        Bachillerato:
+        CCEC1. Reflexiona, promueve y valora críticamente el patrimonio cultural y artístico de cualquier época, contrastando sus singularidades y partiendo de su propia identidad, para defender la libertad de expresión, la igualdad y el enriquecimiento inherente a la diversidad.
+        CCEC2. Investiga las especificidades e intencionalidades de diversas manifestaciones artísticas y culturales del patrimonio, mediante una postura de recepción activa y deleite, diferenciando y analizando los distintos contextos, medios y soportes en que se materializan, así como los lenguajes y elementos técnicos y estéticos que las caracterizan.
+        CCEC3.1 Expresa ideas, opiniones, sentimientos y emociones con creatividad y espíritu crítico, realizando con rigor sus propias producciones culturales y artísticas, para participar de forma activa en la promoción de los derechos humanos y los procesos de socialización y de construcción de la identidad personal que se derivan de la práctica artística.
+        CCEC3.2 Descubre la autoexpresión, a través de la interactuación corporal y la experimentación con diferentes herramientas y lenguajes artísticos, enfrentándose a situaciones creativas con una actitud empática y colaborativa, y con autoestima, iniciativa e imaginación.
+        CCEC4.1 Selecciona e integra con creatividad diversos medios y soportes, así como técnicas plásticas, visuales, audiovisuales, sonoras o corporales, para diseñar y producir proyectos artísticos y culturales sostenibles, analizando las oportunidades de desarrollo personal, social y laboral que ofrecen sirviéndose de la interpretación, la ejecución, la improvisación o la composición.
+        CCEC4.2 Planifica, adapta y organiza sus conocimientos, destrezas y actitudes para responder con creatividad y eficacia a los desempeños derivados de una producción cultural o artística, individual o colectiva, utilizando diversos lenguajes, códigos, técnicas, herramientas y recursos plásticos, visuales, audiovisuales, musicales, corporales o escénicos, valorando tanto el proceso como el producto final y comprendiendo las oportunidades personales, sociales, inclusivas y económicas que ofrecen.
+        `;
+
+        let appState = {
+            pdfBase64: "", mimeType: "application/pdf",
+            subjectSummaryHtml: "", criteriaList: [],
+            sdas: [], introHtml: "", commonHtml: "", trackingHtml: "", resumenHtml: "", selectedSubject: "" 
+        };
+
+        function showTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+            document.getElementById(tabId).classList.add('active');
+            document.getElementById('btn-' + tabId).classList.add('active');
+            updatePrintLayouts();
+        }
+
+        function addTeacherRow() {
+            const container = document.getElementById('deptTeachersContainer');
+            const row = document.createElement('div');
+            row.className = 'flex items-center gap-2 teacher-row mt-2';
+            row.innerHTML = `
+                <label class="flex items-center gap-1 text-xs text-gray-600 cursor-pointer whitespace-nowrap">
+                    <input type="checkbox" class="form-checkbox text-blue-600 is-head">
+                    Jefe/a Depto.
+                </label>
+                <input type="text" class="flex-grow border rounded p-2 teacher-name" placeholder="Nombre del profesor/a">
+                <input type="text" class="flex-grow border rounded p-2 teacher-subjects" placeholder="Materias y niveles que imparte">
+                <button onclick="this.parentElement.remove()" class="text-red-500 hover:text-red-700 p-2"><i class="fas fa-times"></i></button>
+            `;
+            container.appendChild(row);
+        }
+
+        const cleanJSON = (text) => {
+            let cleaned = text.replace(/^```json/im, '').replace(/^```/im, '').replace(/```$/im, '').trim();
+            const firstBrace = cleaned.indexOf('{'); const firstBracket = cleaned.indexOf('[');
+            const startIdx = (firstBrace !== -1 && firstBracket !== -1) ? Math.min(firstBrace, firstBracket) : Math.max(firstBrace, firstBracket);
+            if(startIdx !== -1) cleaned = cleaned.substring(startIdx);
+            const lastBrace = cleaned.lastIndexOf('}'); const lastBracket = cleaned.lastIndexOf(']');
+            const endIdx = Math.max(lastBrace, lastBracket);
+            if(endIdx !== -1) cleaned = cleaned.substring(0, endIdx + 1);
+            return cleaned;
+        };
+
+        const cleanHTML = (text) => {
+            let cleaned = text.trim();
+            if (cleaned.startsWith('```html')) {
+                cleaned = cleaned.substring(7);
+            } else if (cleaned.startsWith('```')) {
+                cleaned = cleaned.substring(3);
+            }
+            if (cleaned.endsWith('```')) {
+                cleaned = cleaned.substring(0, cleaned.length - 3);
+            }
+            return cleaned.trim();
+        };
+
+        const showLoader = (title, text = 'Conectando con Gemini API...') => Swal.fire({ title, html: text, allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+        const closeLoader = () => Swal.close();
+        const showError = (msg) => Swal.fire('Error', msg, 'error');
+
+        function updatePrintLayouts() {
+            const center = document.getElementById('docCenter').value.trim();
+            const year = document.getElementById('academicYear').value.trim();
+            const teachers = document.getElementById('docTeachers').value.trim();
+            const dept = document.getElementById('deptName').value.trim();
+            const titleInput = document.getElementById('docTitle').value.trim();
+            const subject = document.getElementById('subjectSelect')?.value || document.getElementById('subjectSelectFull')?.value || appState.selectedSubject || '';
+            
+            const centerDisplay = year ? `${center} - ${year}` : center;
+            document.getElementById('displayCenterCommon').innerText = centerDisplay;
+            document.getElementById('displayDeptCommon').innerText = dept;
+            document.getElementById('displayCenterSDA').innerText = centerDisplay;
+            document.getElementById('displayTitleSDA').innerText = titleInput ? titleInput.toUpperCase() : (subject ? `PROGRAMACIÓN PARA ${subject.toUpperCase()}` : 'PROGRAMACIÓN DE AULA');
+            document.getElementById('displayTeachersSDA').innerText = teachers;
+            document.getElementById('displayCenterResumen').innerText = centerDisplay;
+            document.getElementById('displayDeptResumen').innerText = dept;
+            document.getElementById('displayCenterTracking').innerText = centerDisplay;
+            document.getElementById('displayDeptTracking').innerText = dept;
+        }
+
+        function getBase64(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.readAsDataURL(file);
+                reader.onload = () => resolve(reader.result.split(',')[1]);
+                reader.onerror = error => reject(error);
+            });
+        }
+
+        async function callGemini(promptText, usePdf = false, temperature = 0.2) {
+            const apiKey = document.getElementById('apiKey').value.trim();
+            const model = document.getElementById('aiModel').value;
+            if (!apiKey) throw new Error("Falta la API Key. Ve a la Pestaña 1.");
+            if (!model) throw new Error("Selecciona un modelo de IA. Ve a la Pestaña 1.");
+            const url = `https://generativelanguage.googleapis.com/v1beta/${model}:generateContent?key=${apiKey}`;
+            const parts = [];
+            if (usePdf && appState.pdfBase64) parts.push({ "inline_data": { "mime_type": appState.mimeType, "data": appState.pdfBase64 } });
+            parts.push({ "text": promptText });
+            const payload = { "contents": [{ "parts": parts }], "generationConfig": { "temperature": temperature } };
+            const response = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+            if (!response.ok) {
+                const errData = await response.json();
+                throw new Error(errData.error?.message || "Error en la petición a la API");
+            }
+            const data = await response.json();
+            if (data.candidates && data.candidates[0].content && data.candidates[0].content.parts[0]) return data.candidates[0].content.parts[0].text;
+            throw new Error("Respuesta inesperada de la API");
+        }
+
+        async function loadModels() {
+            const apiKey = document.getElementById('apiKey').value.trim();
+            if (!apiKey) return showError("Por favor, introduce tu API Key.");
+            showLoader("Cargando modelos...");
+            try {
+                const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`);
+                if (!response.ok) throw new Error("API Key inválida o error de conexión.");
+                const data = await response.json();
+                const select = document.getElementById('aiModel');
+                select.innerHTML = ''; select.classList.remove('bg-gray-50');
+                const models = data.models.filter(m => m.supportedGenerationMethods?.includes('generateContent') && m.name.includes('gemini'));
+                if (models.length === 0) throw new Error("No hay modelos compatibles.");
+                models.forEach(model => {
+                    const opt = document.createElement('option');
+                    opt.value = model.name; opt.innerText = `${model.displayName || model.name} (${model.version || 'Base'})`;
+                    if(model.name.includes('flash') && model.name.includes('1.5')) opt.selected = true;
+                    select.appendChild(opt);
+                });
+                closeLoader();
+                Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Modelos listos', showConfirmButton: false, timer: 2000 });
+            } catch (error) { closeLoader(); showError(error.message); }
+        }
+
+        async function processPDF() {
+            const fileInput = document.getElementById('pdfUpload');
+            if (!fileInput.files.length) return showError("Selecciona un archivo PDF.");
+            showLoader("Analizando PDF...");
+            try {
+                appState.pdfBase64 = await getBase64(fileInput.files[0]);
+                const prompt = "Analiza el currículo adjunto y devuelve ÚNICAMENTE un array JSON estricto con los nombres de las asignaturas presentes. Ejemplo: [\"Biología 1º ESO\", \"Geografía 3º ESO\"]. Sin texto adicional.";
+                let resultText = await callGemini(prompt, true);
+                let subjects = JSON.parse(cleanJSON(resultText));
+                if(!Array.isArray(subjects) || subjects.length === 0) throw new Error("Formato inválido devuelto por la IA.");
+                const select = document.getElementById('subjectSelect');
+                select.innerHTML = ''; subjects.forEach(sub => select.appendChild(new Option(sub, sub)));
+                document.getElementById('subjectSelectionArea').classList.remove('hidden');
+                closeLoader(); updatePrintLayouts();
+            } catch(error) { closeLoader(); showError("No se pudieron extraer las asignaturas. Intenta de nuevo."); console.error(error); }
+        }
+
+        async function processPDFFull() {
+            const fileInput = document.getElementById('pdfUploadFull');
+            if (!fileInput.files.length) return showError("Selecciona un archivo PDF.");
+            showLoader("Analizando PDF...");
+            try {
+                appState.pdfBase64 = await getBase64(fileInput.files[0]);
+                const prompt = "Analiza el currículo adjunto y devuelve ÚNICAMENTE un array JSON estricto con los nombres de las asignaturas presentes. Ejemplo: [\"Biología 1º ESO\", \"Geografía 3º ESO\"]. Sin texto adicional.";
+                let resultText = await callGemini(prompt, true);
+                let subjects = JSON.parse(cleanJSON(resultText));
+                if(!Array.isArray(subjects) || subjects.length === 0) throw new Error("Formato inválido devuelto por la IA.");
+                const select = document.getElementById('subjectSelectFull');
+                select.innerHTML = ''; subjects.forEach(sub => select.appendChild(new Option(sub, sub)));
+                document.getElementById('subjectSelectionAreaFull').classList.remove('hidden');
+                closeLoader(); updatePrintLayouts();
+            } catch(error) { closeLoader(); showError("No se pudieron extraer las asignaturas. Intenta de nuevo."); console.error(error); }
+        }
+
+        async function generateSubjectSummary() {
+            const subject = document.getElementById('subjectSelect').value;
+            if(!subject) return;
+            appState.selectedSubject = subject; 
+            updatePrintLayouts();
+            showLoader(`Extrayendo currículo de ${subject}...`);
+            const prompt = `Extrae el currículo de la asignatura "${subject}" del documento adjunto. DEBES DEVOLVER ESTRICTAMENTE UN OBJETO JSON VÁLIDO CON LA SIGUIENTE ESTRUCTURA EXACTA (sin comillas invertidas de markdown): 
+            { 
+              "summaryTable": [ 
+                { 
+                  "specificCompetence": "Texto completo de la Competencia Específica (Ej: CE1. Comprender...)", 
+                  "criterion": "Texto completo del Criterio de Evaluación asociado (Ej: 1.1. Interpretar...)", 
+                  "descriptors": "Descriptores operativos del perfil de salida asociados a esa competencia. DEBES incluir TODOS los descriptores que correspondan a ESO o Bachillerato (basándote en el nombre de la asignatura) de este listado oficial, con su redacción completa y separados por un salto de línea (\\n): \n${descriptorsData}", 
+                  "basicKnowledges": "Listado detallado y textual de TODOS los saberes básicos del currículo asociados a ese criterio y competencia. Debe incluir el número del saber según el currículo (ej: 1. La célula). Separa cada saber con un salto de línea (\\n)." 
+                } 
+              ], 
+              "criteriaList": ["1.1. Texto completo del criterio 1", "1.2. Texto completo del criterio 2"] 
+            } 
+            Asegúrate de que "criteriaList" contenga TODOS los criterios de evaluación de la asignatura de forma literal. La tabla debe incluir TODAS las competencias específicas de la materia.`;
+            try {
+                const responseText = await callGemini(prompt, true);
+                const data = JSON.parse(cleanJSON(responseText));
+                appState.criteriaList = data.criteriaList || [];
+                if(appState.criteriaList.length === 0) throw new Error("No se extrajeron criterios.");
+                let summaryHtml = '<table class="template-table"><thead><tr><th>Competencia Específica</th><th>Criterio de Evaluación</th><th>Descriptores</th><th>Saberes Básicos</th></tr></thead><tbody>';
+                if (data.summaryTable && Array.isArray(data.summaryTable)) {
+                    data.summaryTable.forEach(row => {
+                        const knowledges = (row.basicKnowledges || '').replace(/\n/g, '<br>');
+                        const descriptors = (row.descriptors || '').replace(/\n/g, '<br>');
+                        summaryHtml += `<tr><td class="text-xs align-top">${row.specificCompetence || ''}</td><td class="text-xs align-top">${row.criterion || ''}</td><td class="text-xs align-top">${descriptors}</td><td class="text-xs align-top">${knowledges}</td></tr>`;
+                    });
+                }
+                summaryHtml += '</tbody></table>';
+                appState.subjectSummaryHtml = summaryHtml;
+                document.getElementById('summaryContent').innerHTML = summaryHtml;
+                document.getElementById('summaryArea').classList.remove('hidden');
+                const criteriaContainer = document.getElementById('criteriaContainer');
+                criteriaContainer.innerHTML = '';
+                appState.criteriaList.forEach((crit, index) => {
+                    const label = document.createElement('label');
+                    label.className = 'flex items-start space-x-2 p-1 hover:bg-gray-100 rounded cursor-pointer';
+                    label.innerHTML = `<input type="checkbox" value="${index}" class="form-checkbox text-green-600 mt-1"><span class="text-sm leading-tight">${crit}</span>`;
+                    criteriaContainer.appendChild(label);
+                });
+                document.getElementById('sdaCreatorPanel').classList.remove('hidden');
+                closeLoader();
+            } catch(error) { closeLoader(); showError("Error al procesar el currículo. La IA no devolvió el formato esperado."); console.error(error); }
+        }
+
+        async function generateSubjectSummaryFull() {
+            const subject = document.getElementById('subjectSelectFull').value;
+            if(!subject) return;
+            appState.selectedSubject = subject; 
+            updatePrintLayouts();
+            showLoader(`Extrayendo currículo de ${subject}...`);
+            const prompt = `Extrae el currículo de la asignatura "${subject}" del documento adjunto. DEBES DEVOLVER ESTRICTAMENTE UN OBJETO JSON VÁLIDO CON LA SIGUIENTE ESTRUCTURA EXACTA (sin comillas invertidas de markdown): 
+            { 
+              "summaryTable": [ 
+                { 
+                  "specificCompetence": "Texto completo de la Competencia Específica (Ej: CE1. Comprender...)", 
+                  "criterion": "Texto completo del Criterio de Evaluación asociado (Ej: 1.1. Interpretar...)", 
+                  "descriptors": "Descriptores operativos del perfil de salida asociados a esa competencia. DEBES incluir TODOS los descriptores que correspondan a ESO o Bachillerato (basándote en el nombre de la asignatura) de este listado oficial, con su redacción completa y separados por un salto de línea (\\n): \n${descriptorsData}", 
+                  "basicKnowledges": "Listado detallado y textual de TODOS los saberes básicos del currículo asociados a ese criterio y competencia. Debe incluir el número del saber según el currículo (ej: 1. La célula). Separa cada saber con un salto de línea (\\n)." 
+                } 
+              ], 
+              "criteriaList": ["1.1. Texto completo del criterio 1", "1.2. Texto completo del criterio 2"] 
+            } 
+            Asegúrate de que "criteriaList" contenga TODOS los criterios de evaluación de la asignatura de forma literal. La tabla debe incluir TODAS las competencias específicas de la materia.`;
+            try {
+                const responseText = await callGemini(prompt, true);
+                const data = JSON.parse(cleanJSON(responseText));
+                appState.criteriaList = data.criteriaList || [];
+                if(appState.criteriaList.length === 0) throw new Error("No se extrajeron criterios.");
+                let summaryHtml = '<table class="template-table"><thead><tr><th>Competencia Específica</th><th>Criterio de Evaluación</th><th>Descriptores</th><th>Saberes Básicos</th></tr></thead><tbody>';
+                if (data.summaryTable && Array.isArray(data.summaryTable)) {
+                    data.summaryTable.forEach(row => {
+                        const knowledges = (row.basicKnowledges || '').replace(/\n/g, '<br>');
+                        const descriptors = (row.descriptors || '').replace(/\n/g, '<br>');
+                        summaryHtml += `<tr><td class="text-xs align-top">${row.specificCompetence || ''}</td><td class="text-xs align-top">${row.criterion || ''}</td><td class="text-xs align-top">${descriptors}</td><td class="text-xs align-top">${knowledges}</td></tr>`;
+                    });
+                }
+                summaryHtml += '</tbody></table>';
+                appState.subjectSummaryHtml = summaryHtml;
+                document.getElementById('summaryContentFull').innerHTML = summaryHtml;
+                document.getElementById('summaryAreaFull').classList.remove('hidden');
+                document.getElementById('fullCourseCreatorPanel').classList.remove('hidden');
+                closeLoader();
+            } catch(error) { closeLoader(); showError("Error al procesar el currículo. La IA no devolvió el formato esperado."); console.error(error); }
+        }
+
+        function getSDAParams() {
+            const checkedBoxes = document.querySelectorAll('#criteriaContainer input[type="checkbox"]:checked');
+            const selectedCriteria = Array.from(checkedBoxes).map(cb => appState.criteriaList[cb.value]);
+            const instruments = [];
+            document.querySelectorAll('#evalInstruments .flex.items-center').forEach(item => {
+                const checkbox = item.querySelector('input[type="checkbox"]');
+                const select = item.querySelector('select');
+                if(checkbox && checkbox.checked) instruments.push({ name: checkbox.value, tool: select ? select.value : "" });
+            });
+            const customInstName = document.getElementById('customInstrument').value.trim();
+            if(customInstName) instruments.push({ name: customInstName, tool: "" });
+            const transversals = Array.from(document.querySelectorAll('#transversalElements input:checked')).map(cb => cb.value);
+            const customTrans = document.getElementById('customTransversal').value.trim();
+            if(customTrans) transversals.push(customTrans);
+            return {
+                idea: document.getElementById('sdaIdea').value.trim(),
+                criteria: selectedCriteria,
+                contextInfo: document.getElementById('contextInfo').value.trim(),
+                digitalClassroom: document.getElementById('digitalClassroom').value.trim(),
+                instruments: instruments,
+                relations: document.getElementById('sdaRelations').value.trim(),
+                transversals: transversals,
+                sessions: document.getElementById('sdaSessions').value,
+                sessionsWeek: document.getElementById('sdaSessionsWeek').value,
+                trimester: document.getElementById('sdaTrimester').value,
+                grouping: document.getElementById('sdaGrouping').value,
+                title: document.getElementById('docTitle').value,
+                teachers: document.getElementById('docTeachers').value,
+                center: document.getElementById('docCenter').value,
+                dept: document.getElementById('deptName').value,
+                subject: appState.selectedSubject
+            };
+        }
+
+        async function generateCommonPart() {
+            const center = document.getElementById('docCenter').value.trim();
+            const year = document.getElementById('academicYear').value.trim();
+            const dept = document.getElementById('deptName').value.trim();
+            const context = document.getElementById('contextInfo').value.trim();
+            const customGrading = document.getElementById('customGradingCriteria').value.trim();
+            const customRecovery = document.getElementById('customRecoveryCriteria').value.trim();
+
+            let teachersData = [];
+            document.querySelectorAll('#deptTeachersContainer .teacher-row').forEach(row => {
+                const isHead = row.querySelector('.is-head').checked;
+                const name = row.querySelector('.teacher-name').value.trim();
+                const subjects = row.querySelector('.teacher-subjects').value.trim();
+                if(name) teachersData.push({ name, subjects, isHead });
+            });
+            let teachersStr = teachersData.map(t => {
+                const role = t.isHead ? ' (Jefatura de Departamento)' : '';
+                return `- ${t.name}${role}: ${t.subjects || 'No especificado'}`;
+            }).join('\n');
+
+            if(!dept) return showError("Indica el nombre del departamento.");
+            showLoader("Generando Parte Común...", "La IA está redactando la programación del departamento...");
+            
+            const prompt = `Actúa como un jefe de departamento experto en LOMLOE. Redacta en formato HTML (usando <h3> para los títulos y <p>, <ul>, <li>, <table> para el contenido) la parte común de la programación didáctica de un departamento basándote en: 
+            - Centro: ${center || 'No especificado'} 
+            - Curso Académico: ${year || 'No especificado'} 
+            - Departamento: ${dept} 
+            - Profesorado del departamento y materias/niveles que imparten:
+            ${teachersStr || 'No especificado'}
+            - Contexto: ${context || 'No especificado'} 
+            
+            Genera exactamente las siguientes secciones con estos títulos y en este orden:
+            <h3>1. Introducción y justificación</h3>
+            <h3>2. Profesorado del departamento</h3> (En esta sección 2, crea una tabla HTML con dos columnas: "Profesor/a" y "Materias y niveles que imparte". Si un profesor/a es Jefe/a de Departamento, añade "(Jefatura de Departamento)" entre paréntesis al lado de su nombre en la columna "Profesor/a". No añadas columnas adicionales para el cargo).
+            <h3>3. Contribución del departamento a las competencias clave</h3>
+            <h3>4. Metodología general y didáctica</h3>
+            <h3>5. Medidas de atención a la diversidad</h3>
+            <h3>6. Materiales y recursos didácticos</h3>
+            <h3>7. Criterios Generales para la Evaluación y Calificación</h3>
+            <h3>8. Recuperación de la materia pendiente de curso anterior</h3>
+
+            Para el PUNTO 7, debes basarte en el siguiente TEXTO PREDEFINIDO y en las INDICACIONES DEL USUARIO. Si el usuario dio indicaciones, debes integrarlas, modificar el texto predefinido para adaptarlo a sus indicaciones, o sustituirlo si así se deduce de las indicaciones. Si no hay indicaciones, usa el texto predefinido casi tal cual, formateándolo en HTML (<h4> para subapartados, <p> para texto).
+            TEXTO PREDEFINIDO PUNTO 7:
+            ${defaultGradingCriteria}
+
+            INDICACIONES DEL USUARIO PARA EL PUNTO 7:
+            ${customGrading || 'Ninguna. Mantener el predefinido.'}
+
+            Para el PUNTO 8, debes basarte en el siguiente TEXTO PREDEFINIDO y en las INDICACIONES DEL USUARIO. Si el usuario dio indicaciones, debes integrarlas, modificar el texto predefinido para adaptarlo a sus indicaciones, o sustituirlo si así se deduce de las indicaciones. Si no hay indicaciones, usa el texto predefinido.
+            TEXTO PREDEFINIDO PUNTO 8:
+            ${defaultRecoveryText}
+
+            INDICACIONES DEL USUARIO PARA EL PUNTO 8:
+            ${customRecovery || 'Ninguna. Mantener el predefinido.'}
+
+            NO uses markdown fuera del HTML. Devuelve solo las etiquetas HTML.`;
+            
+            try {
+                const commonHtmlRaw = await callGemini(prompt, false, 0.4);
+                const commonHtml = cleanHTML(commonHtmlRaw);
+                const fullHtml = `<div class="doc-block relative group bg-white border border-gray-200 rounded-lg p-6 md:p-8 mb-6"><button onclick="this.parentElement.remove()" class="absolute top-2 right-2 bg-red-100 hover:bg-red-500 hover:text-white text-red-500 p-2 rounded no-print transition"><i class="fas fa-trash"></i></button><div class="editable-content generated-content" contenteditable="true"><div class="text-gray-700 space-y-4">${commonHtml}</div></div></div>`;
+                document.getElementById('commonContainer').innerHTML = fullHtml;
+                appState.commonHtml = fullHtml;
+                closeLoader();
+                showTab('tab7');
+                Swal.fire('¡Parte Común creada!', 'Se ha generado el documento en la Pestaña de Parte Común.', 'success');
+            } catch (error) { closeLoader(); showError("Error al generar la parte común: " + error.message); }
+        }
+
+        async function generateIntroAction(params) {
+            showLoader("Generando Introducción...", "Creando el punto de partida y la justificación...");
+            const prompt = `Actúa como un docente experto en LOMLOE. Redacta en formato HTML la introducción de una programación didáctica basándote en los siguientes datos: 
+            - Contexto del centro, alumnado y entorno: ${params.contextInfo || 'Contexto general estándar de un instituto de enseñanza secundaria.'} 
+            - Asignatura: ${params.subject || 'Asignatura no especificada'} 
+            - Título de la programación: ${params.title || 'No especificado'} 
+            
+            Genera el contenido para estos dos apartados EXACTAMENTE con esta estructura HTML:
+            <h3>1. Punto de partida</h3>
+            [Aquí varios párrafos <p> explicando las características del alumnado, el centro y el contexto]
+            <h3>2. Justificación</h3>
+            [Aquí varios párrafos <p> justificando cómo se ha diseñado la programación para adaptarse a ese punto de partida y a los requerimientos legales]
+            
+            NO devuelvas JSON, devuelve solo el código HTML.`;
+            const introHtmlRaw = await callGemini(prompt, false, 0.4);
+            const introHtml = cleanHTML(introHtmlRaw);
+            const fullHtml = `<div class="intro-block relative group bg-white border border-gray-200 rounded-lg p-6 md:p-8 shadow-sm mb-6"><button onclick="this.parentElement.remove()" class="absolute top-2 right-2 bg-red-100 hover:bg-red-500 hover:text-white text-red-500 p-2 rounded no-print transition"><i class="fas fa-trash"></i></button><div class="editable-content generated-content" contenteditable="true"><h2 class="text-2xl font-bold text-blue-900 border-b-2 border-blue-900 pb-2 mb-4">Introducción a la Programación de la materia</h2>${introHtml}</div></div>`;
+            document.getElementById('introContainer').innerHTML = fullHtml;
+            appState.introHtml = fullHtml;
+            document.getElementById('emptyState')?.classList.add('hidden');
+        }
+
+        async function generateIntro() {
+            const params = getSDAParams();
+            try {
+                await generateIntroAction(params);
+                closeLoader();
+                showTab('tab8');
+                Swal.fire('¡Introducción creada!', 'Se ha añadido la introducción en la Pestaña de Programación de Materia.', 'success');
+            } catch (error) { closeLoader(); showError("Error al generar la introducción: " + error.message); }
+        }
+
+        async function generateSingleSDA(isUnit = false) {
+            const params = getSDAParams();
+            if(params.criteria.length === 0) return showError("Selecciona al menos un Criterio de Evaluación.");
+            if(!params.idea) return showError("Describe brevemente la SdA/UD.");
+            showLoader(isUnit ? "Diseñando Unidad Didáctica..." : "Diseñando Situación de Aprendizaje...", "Generando contenido, metodologías y evaluación estructurada...");
+            try {
+                syncAppStateFromDOM(); 
+                const sdaData = await askAIToCreateSDA(params, isUnit);
+                appState.sdas.push({ html: buildSdaHtml(sdaData, appState.sdas.length, isUnit) });
+                renderSDAs();
+                closeLoader();
+                Swal.fire({
+                    title: '¿Conservar datos?',
+                    text: "¿Deseas conservar los datos introducidos para una nueva generación o limpiarlos?",
+                    icon: 'question', showCancelButton: true, confirmButtonText: 'Sí, conservar', cancelButtonText: 'No, limpiar'
+                }).then((result) => {
+                    if (!result.isConfirmed) {
+                        document.getElementById('sdaIdea').value = '';
+                        document.querySelectorAll('#criteriaContainer input').forEach(cb => cb.checked = false);
+                        document.getElementById('sdaRelations').value = '';
+                        document.getElementById('customInstrument').value = '';
+                        document.getElementById('customTransversal').value = '';
+                    }
+                    showTab('tab8');
+                });
+            } catch (error) { closeLoader(); showError("Error al generar: " + error.message); }
+        }
+
+        async function generateFullCourse() {
+            if(appState.criteriaList.length === 0) return showError("No hay criterios extraídos. Carga el currículo en esta pestaña primero.");
+            
+            const params = getSDAParams(); 
+            const instructions = document.getElementById('fullCourseInstructions').value.trim();
+            const sessionsWeek = document.getElementById('courseSessionsWeek').value;
+            const totalWeeks = document.getElementById('courseTotalWeeks').value;
+            
+            Swal.fire({
+                title: '¿Generar curso completo?',
+                text: "La IA diseñará y redactará la introducción y todas las SdA necesarias para cubrir los " + appState.criteriaList.length + " criterios. Este proceso puede tardar varios minutos.",
+                icon: 'warning', showCancelButton: true, confirmButtonText: 'Sí, generar', cancelButtonText: 'Cancelar'
+            }).then(async (result) => {
+                if(result.isConfirmed) {
+                    try {
+                        showLoader("Fase 1/3: Generando Introducción...", "Creando el punto de partida...");
+                        await generateIntroAction(params);
+                        
+                        Swal.update({ title: "Fase 2/3: Planificando el curso...", html: "Analizando cómo distribuir los criterios en todo el año..." });
+                        const planPrompt = `Eres un jefe de estudios. Crea una planificación anual estructurada en Situaciones de Aprendizaje que logre cubrir TODOS Y CADA UNO de los siguientes criterios de evaluación: ${JSON.stringify(appState.criteriaList)} 
+                        Contexto del centro y alumnado: ${params.contextInfo || 'No especificado'} 
+                        Configuración temporal: ${sessionsWeek} sesiones por semana, durante un total de ${totalWeeks} semanas en el curso.
+                        Instrucciones adicionales del usuario: ${instructions || "Ninguna, distribuye de forma equilibrada y lógica."} 
+                        Crea las SdA necesarias. Devuelve ÚNICA Y ESTRICTAMENTE UN ARRAY JSON VÁLIDO de objetos con esta estructura: [ { "idea": "Título/Idea temática detallada de la SdA", "criteria": ["Texto exacto del criterio 1", "Texto exacto del criterio 2"], "sessions": 8, "trimester": "Primer Trimestre" } ]`;
+                        
+                        const planResponse = await callGemini(planPrompt, false, 0.2);
+                        const sdaPlan = JSON.parse(cleanJSON(planResponse));
+                        if(!Array.isArray(sdaPlan) || sdaPlan.length === 0) throw new Error("La planificación falló.");
+
+                        appState.sdas = []; 
+                        
+                        for(let i=0; i < sdaPlan.length; i++) {
+                            const plan = sdaPlan[i];
+                            Swal.update({ title: `Fase 3/3: Generando SdA ${i+1} de ${sdaPlan.length}`, html: `<b>Tema:</b> ${plan.idea.substring(0, 50)}...<br>Por favor, no cierres esta ventana.` });
+                            
+                            const sdaParams = {
+                                idea: plan.idea, criteria: plan.criteria, contextInfo: params.contextInfo, digitalClassroom: "", instruments: [], relations: "", transversals: [], sessions: plan.sessions || 8, sessionsWeek: sessionsWeek, trimester: plan.trimester || "Primer Trimestre", grouping: "Combinación de Trabajo Individual y Grupal", title: params.title, teachers: params.teachers, center: params.center, dept: params.dept, subject: params.subject
+                            };
+                            
+                            const sdaFullData = await askAIToCreateSDA(sdaParams, false); 
+                            appState.sdas.push({ html: buildSdaHtml(sdaFullData, appState.sdas.length, false) });
+                            renderSDAs();
+                        }
+                        
+                        closeLoader();
+                        Swal.fire('¡Curso Generado!', `Se han creado la introducción y ${sdaPlan.length} Situaciones de Aprendizaje.`, 'success');
+                        showTab('tab8');
+                    } catch (error) {
+                        closeLoader();
+                        showError("Error en la autogeneración: " + error.message);
+                        console.error(error);
+                    }
+                }
+            });
+        }
+
+        async function askAIToCreateSDA(params, isUnit) {
+            let instStr = params.instruments.length > 0 ? params.instruments.map(i => i.tool ? `${i.name} (Herramienta: ${i.tool})` : `${i.name} (Herramienta: IA debe elegir una adecuada)`).join(", ") : "[IA DEBE ELEGIR LOS MÁS ADECUADOS y ASIGNAR UNA HERRAMIENTA a cada uno]";
+            let transversalStr = params.transversals.length > 0 ? params.transversals.join(", ") : "[IA debe seleccionar los que mejor encajen]";
+            const unitText = isUnit ? "Unidad Didáctica" : "Situación de Aprendizaje";
+            const pedagogicalFocus = isUnit 
+                ? `ENFOQUE PEDAGÓGICO (UNIDAD DIDÁCTICA): - Enfoque principal: Centrada en la transmisión y organización de los contenidos y saberes de una materia. - Estructura: Lineal, tradicional y secuencial por sesiones o temas. - Visión: Planifica el "qué enseñar" y el "cuándo" en un periodo determinado.`
+                : `ENFOQUE PEDAGÓGICO (SITUACIÓN DE APRENDIZAJE): - Enfoque principal: Centrada en el desarrollo de competencias mediante la aplicación práctica en la vida real. - Estructura: Flexible, basada en retos, problemas cotidianos y tareas con un producto final real. - Visión: Parte del contexto del alumno y usa metodologías activas y colaborativas.`;
+            
+            const prompt = `Actúa como un experto docente LOMLOE. Crea el diseño de una ${unitText} para la asignatura basada en este resumen curricular:\n\n${appState.subjectSummaryHtml}\n\n${pedagogicalFocus}\n\nDATOS DE CONFIGURACIÓN: - Idea/Temática: ${params.idea} - Centro: ${params.center || 'No especificado'} - Departamento: ${params.dept || 'No especificado'} - Contexto del centro y alumnado: ${params.contextInfo || 'No se especifica, adaptar a un contexto general.'} - Aula digital disponible: ${params.digitalClassroom || 'No se especifica, proponer uso de plataformas genéricas si es necesario.'} - Relación con materias/proyectos/entorno: ${params.relations || 'No se especifica, pero puedes añadir relaciones lógicas si lo crees conveniente.'} - Elementos Transversales a incluir: ${transversalStr} - Criterios a trabajar: ${JSON.stringify(params.criteria)} - Sesiones: ${params.sessions} (Ritmo: ${params.sessionsWeek}/semana) - Trimestre: ${params.trimester} - Agrupamientos: ${params.grouping} - Instrumentos y herramientas preferidas: ${instStr} 
+
+            Devuelve ÚNICA Y EXCLUSIVAMENTE UN OBJETO JSON VÁLIDO con la siguiente estructura (NO uses markdown fuera del JSON): 
+            { 
+                "id": "sda_${Date.now()}", 
+                "title": "Título atractivo de la ${unitText}", 
+                "description": "Descripción detallada del reto o problema a resolver.", 
+                "temporalization": "Resumen de temporalización (Ej: 8 sesiones durante el Primer Trimestre).", 
+                "activities": [ { "session": "Sesión 1", "description": "Descripción de lo que se hace..." } ], 
+                "curriculumTable": [ { 
+                    "criterion": "Texto exacto del criterio de evaluación trabajado", 
+                    "specificCompetence": "Competencia específica estrictamente relacionada con ese criterio según el currículo", 
+                    "descriptors": "Descriptores operativos del perfil de salida asociados a esa competencia. DEBES incluir TODOS los descriptores que correspondan a ESO o Bachillerato (basándote en la asignatura) de este listado oficial, con su redacción completa y separados por un salto de línea (\\n): \n${descriptorsData}", 
+                    "basicKnowledges": "Saberes básicos LITERALES Y DETALLADOS del currículo asociados a ese criterio. Cada saber debe incluir su número (ej: '1. La célula'). ES OBLIGATORIO separar cada saber básico con un salto de línea (\\n), NO con punto y seguido." 
+                } ], 
+                "methodology": "Justificación de la metodología (ABP, Cooperativo, etc) y modelo de enseñanza.", 
+                "resources": "Listado de recursos materiales (tecnológicos, fungibles, etc.) y espacios necesarios.", 
+                "relations": "Texto redactado explicando la relación de la ${unitText} con otras materias, proyectos de centro o externos.", 
+                "transversalElements": "Texto redactado explicando cómo se trabajan los elementos transversales indicados.", 
+                "diversity": "Texto redactado detallando medidas concretas de atención a la diversidad.", 
+                "nonPresentialTracking": "Texto redactado detallando el seguimiento en caso de no presencialidad o semipresencialidad.", 
+                "recovery": "Texto redactado describiendo mecanismos para la recuperación de los aprendizajes no adquiridos.", 
+                "recoveryEvaluation": [ { "criterion": "Criterio de evaluación trabajado", "instrument": "Único instrumento de evaluación para recuperación de este criterio", "tool": "Herramienta de evaluación correspondiente", "weight": "100%" } ], 
+                "extension": "Texto redactado detallando propuestas de ampliación.", 
+                "evaluation": [ { "criterion": "Criterio de evaluación trabajado", "instruments": [ { "name": "Nombre del instrumento 1", "tool": "Herramienta elegida", "weight": "50%" }, { "name": "Nombre del instrumento 2", "tool": "Herramienta elegida", "weight": "50%" } ] } ] 
+            } 
+            REGLAS ESTRICTAS PARA EL JSON: 1. En "curriculumTable", incluye únicamente las Competencias Específicas relacionadas ESTRICAMENTE con los criterios trabajados. El campo "basicKnowledges" DEBE contener saberes textuales con su número, separados por saltos de línea (\\n). 2. En "evaluation", es OBLIGATORIO que cada criterio tenga AL MENOS DOS (2) instrumentos de evaluación. La suma de los pesos de los instrumentos para UN MISMO criterio debe ser SIEMPRE 100%. 3. En "recoveryEvaluation", debes incluir una entrada por CADA criterio trabajado. Cada criterio debe tener EXACTAMENTE UN (1) instrumento (weight "100%"). 4. Redacta "relations", "transversalElements", "diversity", "nonPresentialTracking", "recovery" y "extension" como párrafos de texto coherentes y detallados.`;
+
+            const response = await callGemini(prompt, false, 0.3);
+            return JSON.parse(cleanJSON(response));
+        }
+
+        function addTableRow(btn) {
+            const table = btn.closest('.sda-section')?.querySelector('table') || btn.closest('.doc-section')?.querySelector('table');
+            if(!table) return;
+            const tbody = table.querySelector('tbody');
+            const tr = document.createElement('tr');
+            const thCount = table.querySelectorAll('thead th').length;
+            for(let i=0; i<thCount; i++) { const td = document.createElement('td'); tr.appendChild(td); }
+            tbody.appendChild(tr);
+        }
+
+        function syncAppStateFromDOM() {
+            const contents = document.querySelectorAll('#sdasList .editable-content');
+            contents.forEach((el, i) => { if(appState.sdas[i]) appState.sdas[i].html = el.innerHTML; });
+            const intro = document.querySelector('#introContainer .editable-content');
+            if(intro) appState.introHtml = intro.parentElement.outerHTML;
+            const common = document.querySelector('#commonContainer .editable-content');
+            if(common) appState.commonHtml = common.parentElement.outerHTML;
+            const tracking = document.querySelector('#trackingContainer .editable-content');
+            if(tracking) appState.trackingHtml = tracking.parentElement.outerHTML;
+            const resumen = document.querySelector('#resumenContainer .editable-content');
+            if(resumen) appState.resumenHtml = resumen.parentElement.outerHTML;
+        }
+
+        function buildSdaHtml(sda, index, isUnit = false) {
+            let evaluationRows = '';
+            (sda.evaluation || []).forEach(ev => {
+                const insts = ev.instruments || [];
+                if (insts.length === 0) {
+                    evaluationRows += `<tr><td class="text-sm">${ev.criterion || ''}</td><td colspan="3" class="text-center text-gray-400 italic">No definido</td></tr>`;
+                } else {
+                    insts.forEach((inst, i) => {
+                        evaluationRows += `<tr>${i === 0 ? `<td rowspan="${insts.length}" class="text-sm align-top">${ev.criterion || ''}</td>` : ''}<td>${inst.name || ''}</td><td>${inst.tool || ''}</td><td class="text-center font-bold">${inst.weight || ''}</td></tr>`;
+                    });
+                }
+            });
+
+            let recoveryRows = '';
+            (sda.recoveryEvaluation || []).forEach(r => {
+                recoveryRows += `<tr><td class="text-sm">${r.criterion || ''}</td><td>${r.instrument || ''}</td><td>${r.tool || ''}</td><td class="text-center font-bold">${r.weight || ''}</td></tr>`;
+            });
+
+            const unitTitle = isUnit ? "Unidad Didáctica" : "Situación de Aprendizaje";
+
+            // Generar una tabla independiente por cada criterio y asegurar separación visual
+            const curriculumTables = (sda.curriculumTable || []).map(c => `
+                <table class="template-table" style="margin-bottom: 15px;">
+                    <tbody>
+                        <tr style="font-weight: bold;"><th style="width: 25%; font-weight: bold;">Criterio de Evaluación</th><td class="text-sm" style="font-weight: bold;">${c.criterion || ''}</td></tr>
+                        <tr><th>Competencia Específica</th><td class="text-sm">${c.specificCompetence || ''}</td></tr>
+                        <tr><th>Descriptores Operativos</th><td class="text-sm">${(c.descriptors || '').replace(/\n/g, '<br>')}</td></tr>
+                        <tr><th>Saberes Básicos</th><td class="text-sm">${(c.basicKnowledges || '').replace(/\n/g, '<br>')}</td></tr>
+                    </tbody>
+                </table>
+            `).join('<div style="height: 5px;"></div>');
+
+            return `
+               <h3 class="text-lg font-bold bg-green-100 text-green-900 p-2 border-l-4 border-green-600 mb-2 mt-4">${unitTitle} ${index + 1}</h3>
+                <h2 class="text-2xl font-bold text-gray-800 border-b-2 border-blue-900 pb-2 mb-4">${sda.title || 'Sin título'}</h2>
+                
+                <div class="sda-section"><h3 class="text-lg font-bold bg-blue-100 text-blue-900 p-2 border-l-4 border-blue-600 mb-2 mt-4">1. Identificación y Descripción</h3><p class="text-gray-700 text-justify mb-2"><strong>Descripción:</strong> ${sda.description}</p><p class="text-gray-700"><strong>Temporalización:</strong> ${sda.temporalization}</p></div>
+                <div class="sda-section mt-4"><h3 class="text-lg font-bold bg-blue-100 text-blue-900 p-2 border-l-4 border-blue-600 mb-2">2. Concreción Curricular</h3>${curriculumTables}</div>
+                <div class="sda-section mt-4"><h3 class="text-lg font-bold bg-blue-100 text-blue-900 p-2 border-l-4 border-blue-600 mb-2">3. Metodología y Recursos</h3><p class="text-gray-700 text-justify mb-2"><strong>Metodología:</strong> ${sda.methodology}</p><p class="text-gray-700 text-justify"><strong>Recursos y Espacios:</strong> ${sda.resources}</p></div>
+                <div class="sda-section mt-4"><h3 class="text-lg font-bold bg-blue-100 text-blue-900 p-2 border-l-4 border-blue-600 mb-2">4. Secuencia de Actividades</h3><table class="template-table"><thead><tr><th style="width: 25%; white-space: nowrap;">Sesión</th><th>Descripción de la Actividad</th></tr></thead><tbody>${(sda.activities || []).map(act => `<tr><td style="white-space: nowrap;"><strong>${act.session}</strong></td><td>${act.description}</td></tr>`).join('')}</tbody></table><button onclick="addTableRow(this)" class="no-print text-xs text-blue-600 mt-1 hover:underline"><i class="fas fa-plus"></i> Añadir línea</button></div>
+                <div class="sda-section mt-4"><h3 class="text-lg font-bold bg-blue-100 text-blue-900 p-2 border-l-4 border-blue-600 mb-2">5. Evaluación</h3><table class="template-table"><thead><tr><th style="width: 40%;">Criterio de Evaluación</th><th style="width: 30%;">Instrumento</th><th style="width: 20%;">Herramienta</th><th style="width: 10%;">Peso</th></tr></thead><tbody>${evaluationRows}</tbody></table><button onclick="addTableRow(this)" class="no-print text-xs text-blue-600 mt-1 hover:underline"><i class="fas fa-plus"></i> Añadir línea</button><p class="text-xs text-gray-500 mt-1 italic">Nota: La suma de los pesos de los instrumentos para cada criterio debe ser el 100%.</p></div>
+                <div class="sda-section mt-4"><h3 class="text-lg font-bold bg-blue-100 text-blue-900 p-2 border-l-4 border-blue-600 mb-2">6. Relación con el Entorno y otras Materias</h3><p class="text-gray-700 text-justify">${sda.relations || ''}</p></div>
+                <div class="sda-section mt-4"><h3 class="text-lg font-bold bg-blue-100 text-blue-900 p-2 border-l-4 border-blue-600 mb-2">7. Elementos Transversales</h3><p class="text-gray-700 text-justify">${sda.transversalElements || ''}</p></div>
+                <div class="sda-section mt-4"><h3 class="text-lg font-bold bg-blue-100 text-blue-900 p-2 border-l-4 border-blue-600 mb-2">8. Atención a la Diversidad</h3><p class="text-gray-700 text-justify">${sda.diversity || ''}</p></div>
+                <div class="sda-section mt-4"><h3 class="text-lg font-bold bg-blue-100 text-blue-900 p-2 border-l-4 border-blue-600 mb-2">9. Estrategias de Refuerzo y Planes de Recuperación</h3><p class="text-gray-700 text-justify mb-2">${sda.recovery || ''}</p><table class="template-table"><thead><tr><th style="width: 35%;">Criterio de Evaluación</th><th style="width: 30%;">Instrumento</th><th style="width: 20%;">Herramienta</th><th style="width: 15%;">Peso</th></tr></thead><tbody>${recoveryRows}</tbody></table><button onclick="addTableRow(this)" class="no-print text-xs text-blue-600 mt-1 hover:underline"><i class="fas fa-plus"></i> Añadir línea</button></div>
+                <div class="sda-section mt-4"><h3 class="text-lg font-bold bg-blue-100 text-blue-900 p-2 border-l-4 border-blue-600 mb-2">10. Seguimiento en caso de No Presencialidad</h3><p class="text-gray-700 text-justify">${sda.nonPresentialTracking || ''}</p></div>
+                <div class="sda-section mt-4"><h3 class="text-lg font-bold bg-blue-100 text-blue-900 p-2 border-l-4 border-blue-600 mb-2">11. Propuestas de Ampliación</h3><p class="text-gray-700 text-justify">${sda.extension || ''}</p></div>
+            `;
+        }
+
+        function renderSDAs() {
+            const container = document.getElementById('sdasList');
+            container.innerHTML = '';
+            if(appState.sdas.length === 0) {
+                container.innerHTML = `<div id="emptyState" class="text-center text-gray-400 py-20 italic">Las Situaciones de Aprendizaje o Unidades Didácticas generadas aparecerán aquí.</div>`;
+            } else {
+                appState.sdas.forEach((sdaObj, index) => {
+                    const sdaDiv = document.createElement('div');
+                    sdaDiv.className = 'sda-block relative group bg-white border border-gray-200 rounded-lg p-6 md:p-8 shadow-sm';
+                    const deleteBtn = document.createElement('button');
+                    deleteBtn.innerHTML = '<i class="fas fa-trash"></i>';
+                    deleteBtn.className = 'absolute top-2 right-2 bg-red-100 hover:bg-red-500 hover:text-white text-red-500 p-2 rounded no-print transition';
+                    deleteBtn.onclick = function() {
+                        syncAppStateFromDOM(); 
+                        const idx = Array.from(document.querySelectorAll('#sdasList .sda-block')).indexOf(this.closest('.sda-block'));
+                        if(idx !== -1) { appState.sdas.splice(idx, 1); renderSDAs(); }
+                    };
+                    const contentDiv = document.createElement('div');
+                    contentDiv.className = 'editable-content';
+                    contentDiv.setAttribute('contenteditable', 'true');
+                    contentDiv.innerHTML = sdaObj.html || '';
+                    sdaDiv.appendChild(deleteBtn);
+                    sdaDiv.appendChild(contentDiv);
+                    container.appendChild(sdaDiv);
+                });
+            }
+        }
+
+        async function generateResumenDoc() {
+            if(appState.sdas.length === 0) return showError("No hay Situaciones de Aprendizaje generadas. Crea alguna primero.");
+            
+            showLoader("Generando Resumen...", "Extrayendo datos de las SdAs y organizando la información...");
+            
+            try {
+                let criteriaMap = {};
+                let sdaList = [];
+
+                appState.sdas.forEach((sdaObj, index) => {
+                    const tempDiv = document.createElement('div');
+                    tempDiv.innerHTML = sdaObj.html;
+                    const titleEl = tempDiv.querySelector('h2');
+                    const title = titleEl ? titleEl.innerText : `SdA ${index + 1}`;
+                    sdaList.push(title);
+
+                    const tables = tempDiv.querySelectorAll('table');
+                    tables.forEach(table => {
+                        const headerText = table.querySelector('thead')?.innerText || '';
+                        // Si la tabla no tiene thead, es una tabla de concreción curricular nueva
+                        if(headerText === '' || table.querySelector('tbody tr th')) {
+                            const rows = table.querySelectorAll('tbody tr');
+                            let critText = '';
+                            let compText = '';
+                            let descText = '';
+                            let sabText = '';
+                            
+                            rows.forEach(tr => {
+                                const thText = tr.querySelector('th')?.innerText.trim() || '';
+                                const tdText = tr.querySelector('td')?.innerText.trim() || '';
+                                if(thText.includes('Criterio')) critText = tdText;
+                                else if(thText.includes('Competencia')) compText = tdText;
+                                else if(thText.includes('Descriptores')) descText = tdText;
+                                else if(thText.includes('Saberes')) sabText = tdText;
+                            });
+
+                            if(critText) {
+                                if(!criteriaMap[critText]) {
+                                    criteriaMap[critText] = { sdas: [], descriptors: descText, knowledges: sabText };
+                                }
+                                if(!criteriaMap[critText].sdas.includes(title)) criteriaMap[critText].sdas.push(title);
+                                if(!criteriaMap[critText].descriptors && descText) criteriaMap[critText].descriptors = descText;
+                                if(!criteriaMap[critText].knowledges && sabText) criteriaMap[critText].knowledges = sabText;
+                            }
+                        }
+                    });
+                });
+
+                const prompt = `Actúa como un experto docente. Tienes los siguientes datos extraídos de una programación didáctica. 
+                Datos de Criterios: ${JSON.stringify(criteriaMap)}
+                Lista de SdAs: ${JSON.stringify(sdaList)}
+                
+                Genera un documento en formato HTML que contenga EXACTAMENTE dos tablas. Usa la clase "template-table" para las tablas.
+                
+                TABLA 1: Cuadro resumen por Criterios de Evaluación.
+                Columnas: "Criterio de Evaluación", "SdAs/UDs donde se trabaja", "Descriptores Operativos", "Saberes Básicos".
+                Filas: Una por cada criterio. En la columna "SdAs/UDs", lista las situaciones separadas por comas.
+                IMPORTANTE: Ordena las filas de la TABLA 1 estrictamente por el número de criterio de forma ascendente (ej: 1.1, 1.2, 2.1, 2.2, etc.).
+                
+                TABLA 2: Cuadro resumen por Situaciones de Aprendizaje.
+                Columnas: "SdA/UD", "Criterios que trabaja", "Descriptores Operativos", "Saberes Básicos".
+                Filas: Una por cada SdA. En la columna "Criterios", lista los criterios separadas por comas. En descriptores y saberes, agrupa los de los criterios de esa SdA.
+                
+                Devuelve solo el código HTML de las dos tablas con sus títulos (<h3>).`;
+
+                const resumenHtmlRaw = await callGemini(prompt, false, 0.2);
+                const resumenHtml = cleanHTML(resumenHtmlRaw);
+                const fullHtml = `
+                    <div class="doc-block relative group bg-white border border-gray-200 rounded-lg p-6 md:p-8 mb-6">
+                        <button onclick="this.parentElement.remove()" class="absolute top-2 right-2 bg-red-100 hover:bg-red-500 hover:text-white text-red-500 p-2 rounded no-print transition"><i class="fas fa-trash"></i></button>
+                        <div class="editable-content generated-content" contenteditable="true">
+                            ${resumenHtml}
+                        </div>
+                    </div>
+                `;
+
+                document.getElementById('resumenContainer').innerHTML = fullHtml;
+                appState.resumenHtml = fullHtml;
+                
+                closeLoader();
+                showTab('tab9');
+                Swal.fire('¡Resumen Generado!', 'Se ha creado el cuadro resumen en la pestaña de documento.', 'success');
+            } catch (error) {
+                closeLoader();
+                showError("Error al generar el resumen: " + error.message);
+            }
+        }
+
+        function generateTrackingDoc() {
+            if(appState.sdas.length === 0) return showError("No hay Situaciones de Aprendizaje generadas. Crea alguna primero.");
+            
+            let htmlContent = '';
+            appState.sdas.forEach((sdaObj, index) => {
+                const tempDiv = document.createElement('div');
+                tempDiv.innerHTML = sdaObj.html;
+                const titleEl = tempDiv.querySelector('h2');
+                const title = titleEl ? titleEl.innerText : `SdA ${index + 1}`;
+                
+                let sessionRows = '';
+                let evalRows = '';
+                const tables = tempDiv.querySelectorAll('table');
+                tables.forEach(table => {
+                    const headerText = table.querySelector('thead')?.innerText || '';
+                    if(headerText.includes('Sesión')) {
+                        table.querySelectorAll('tbody tr').forEach(tr => {
+                            const sessionName = tr.children[0]?.innerText || '';
+                            const sessionDesc = tr.children[1]?.innerText || '';
+                            sessionRows += `
+                                <tr>
+                                    <td class="text-sm"><strong>${sessionName}</strong><br><span class="text-xs text-gray-500">${sessionDesc}</span></td>
+                                    <td style="font-size:8pt">&nbsp;</td>
+                                    <td style="font-size:8pt">&nbsp;</td>
+                                    <td style="font-size:8pt">&nbsp;</td>
+                                </tr>
+                            `;
+                        });
+                    }
+                    if(headerText.includes('Instrumento')) {
+                        table.querySelectorAll('tbody tr').forEach(tr => {
+                            const tds = tr.querySelectorAll('td');
+                            if(tds.length >= 4) {
+                                const crit = tds[0].innerText;
+                                const inst = tds[1].innerText;
+                                const tool = tds[2].innerText;
+                                const weight = tds[3].innerText;
+                                evalRows += `
+                                    <tr style="background:#f9fafb;">
+                                        <td class="text-sm"><strong>Instrumento:</strong> ${inst} <span class="text-xs text-gray-500">(Criterio: ${crit} - Herramienta: ${tool} - Peso: ${weight})</span></td>
+                                        <td style="font-size:8pt">&nbsp;</td>
+                                        <td style="font-size:8pt">&nbsp;</td>
+                                        <td style="font-size:8pt">&nbsp;</td>
+                                    </tr>
+                                `;
+                            }
+                        });
+                    }
+                });
+
+                if(sessionRows === '') {
+                    sessionRows = `<tr><td colspan="4" class="text-center text-gray-400 italic">No se extrajeron sesiones</td></tr>`;
+                }
+
+                htmlContent += `
+                    <div class="tracking-block mb-6">
+                        <h3 class="text-lg font-bold bg-green-100 text-green-900 p-2 border-l-4 border-green-600 mb-2 mt-4">Seguimiento: ${title}</h3>
+                        <table class="template-table">
+                            <thead>
+                                <tr>
+                                    <th style="width: 35%;">Sesión / Instrumento</th>
+                                    <th style="width: 15%;">Fecha Prevista</th>
+                                    <th style="width: 15%;">Fecha Real</th>
+                                    <th style="width: 35%;">Observaciones</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${sessionRows}
+                                ${evalRows}
+                                <tr>
+                                    <td colspan="4" style="background-color: #f3f4f6; padding: 10px;">
+                                        <strong>Observaciones de seguimiento o mejora de la SdA/UD:</strong>
+                                        <div style="min-height: 40px;"></div>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                `;
+            });
+
+            const fullHtml = `
+                <div class="doc-block relative group bg-white border border-gray-200 rounded-lg p-6 md:p-8 mb-6">
+                    <button onclick="this.parentElement.remove()" class="absolute top-2 right-2 bg-red-100 hover:bg-red-500 hover:text-white text-red-500 p-2 rounded no-print transition"><i class="fas fa-trash"></i></button>
+                    <div class="editable-content" contenteditable="true">
+                        ${htmlContent}
+                    </div>
+                </div>
+            `;
+
+            document.getElementById('trackingContainer').innerHTML = fullHtml;
+            appState.trackingHtml = fullHtml;
+            showTab('tab10');
+            Swal.fire('¡Documento Generado!', 'Se ha creado el documento de seguimiento.', 'success');
+        }
+
+        async function saveWork() {
+            syncAppStateFromDOM(); 
+            
+            let teachersData = [];
+            document.querySelectorAll('#deptTeachersContainer .teacher-row').forEach(row => {
+                teachersData.push({
+                    isHead: row.querySelector('.is-head').checked,
+                    name: row.querySelector('.teacher-name').value,
+                    subjects: row.querySelector('.teacher-subjects').value
+                });
+            });
+
+            const saveData = {
+                aiModel: document.getElementById('aiModel').value,
+                docTitle: document.getElementById('docTitle').value, 
+                docCenter: document.getElementById('docCenter').value, 
+                academicYear: document.getElementById('academicYear').value,
+                docTeachers: document.getElementById('docTeachers').value, 
+                deptName: document.getElementById('deptName').value, 
+                deptTeachersData: teachersData,
+                contextInfo: document.getElementById('contextInfo').value,
+                customGradingCriteria: document.getElementById('customGradingCriteria').value,
+                customRecoveryCriteria: document.getElementById('customRecoveryCriteria').value,
+                courseSessionsWeek: document.getElementById('courseSessionsWeek').value,
+                courseTotalWeeks: document.getElementById('courseTotalWeeks').value,
+                selectedSubject: document.getElementById('subjectSelect')?.value || document.getElementById('subjectSelectFull')?.value,
+                fullCourseInstructions: document.getElementById('fullCourseInstructions').value,
+                subjectSummaryHtml: appState.subjectSummaryHtml, 
+                criteriaList: appState.criteriaList,
+                commonHtml: appState.commonHtml, 
+                introHtml: appState.introHtml, 
+                trackingHtml: appState.trackingHtml, 
+                resumenHtml: appState.resumenHtml,
+                sdas: appState.sdas.map(s => s.html) 
+            };
+            const jsonString = JSON.stringify(saveData, null, 2);
+            let filename = (saveData.docTitle || "Programacion").replace(/[^a-z0-9]/gi, '_').toLowerCase() + ".json";
+            try {
+                if (window.showSaveFilePicker) {
+                    const fileHandle = await window.showSaveFilePicker({ suggestedName: filename, types: [{ description: 'Archivo JSON', accept: { 'application/json': ['.json'] } }] });
+                    const writable = await fileHandle.createWritable(); await writable.write(jsonString); await writable.close();
+                    Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Guardado correctamente', showConfirmButton: false, timer: 2000 });
+                } else {
+                    const blob = new Blob([jsonString], { type: "application/json" });
+                    const url = URL.createObjectURL(blob); const a = document.createElement('a');
+                    a.href = url; a.download = filename; document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
+                }
+            } catch (err) { if (err.name !== 'AbortError') { showError("Error al guardar el archivo."); console.error(err); } }
+        }
+
+        function loadWork(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const loaded = JSON.parse(e.target.result);
+                    if(loaded.aiModel) { document.getElementById('aiModel').innerHTML = `<option value="${loaded.aiModel}" selected>${loaded.aiModel}</option>`; }
+                    if(loaded.docTitle) document.getElementById('docTitle').value = loaded.docTitle;
+                    if(loaded.docCenter) document.getElementById('docCenter').value = loaded.docCenter;
+                    if(loaded.academicYear) document.getElementById('academicYear').value = loaded.academicYear;
+                    if(loaded.docTeachers) {
+                        document.getElementById('docTeachers').value = loaded.docTeachers; 
+                        document.getElementById('docTeachersFull').value = loaded.docTeachers;
+                    }
+                    if(loaded.deptName) document.getElementById('deptName').value = loaded.deptName;
+                    
+                    const tc = document.getElementById('deptTeachersContainer');
+                    tc.innerHTML = '';
+                    if(loaded.deptTeachersData && loaded.deptTeachersData.length > 0) {
+                        loaded.deptTeachersData.forEach(t => {
+                            const row = document.createElement('div');
+                            row.className = 'flex items-center gap-2 teacher-row mt-2';
+                            row.innerHTML = `
+                                <label class="flex items-center gap-1 text-xs text-gray-600 cursor-pointer whitespace-nowrap">
+                                    <input type="checkbox" class="form-checkbox text-blue-600 is-head" ${t.isHead ? 'checked' : ''}>
+                                    Jefe/a Depto.
+                                </label>
+                                <input type="text" class="flex-grow border rounded p-2 teacher-name" placeholder="Nombre del profesor/a" value="${t.name || ''}">
+                                <input type="text" class="flex-grow border rounded p-2 teacher-subjects" placeholder="Materias y niveles que imparte" value="${t.subjects || ''}">
+                                <button onclick="this.parentElement.remove()" class="text-red-500 hover:text-red-700 p-2"><i class="fas fa-times"></i></button>
+                            `;
+                            tc.appendChild(row);
+                        });
+                    } else {
+                        addTeacherRow(); 
+                    }
+
+                    if(loaded.contextInfo) document.getElementById('contextInfo').value = loaded.contextInfo;
+                    if(loaded.customGradingCriteria) document.getElementById('customGradingCriteria').value = loaded.customGradingCriteria;
+                    if(loaded.customRecoveryCriteria) document.getElementById('customRecoveryCriteria').value = loaded.customRecoveryCriteria;
+                    if(loaded.courseSessionsWeek) document.getElementById('courseSessionsWeek').value = loaded.courseSessionsWeek;
+                    if(loaded.courseTotalWeeks) document.getElementById('courseTotalWeeks').value = loaded.courseTotalWeeks;
+                    if(loaded.fullCourseInstructions) document.getElementById('fullCourseInstructions').value = loaded.fullCourseInstructions;
+                    
+                    if(loaded.selectedSubject) {
+                        appState.selectedSubject = loaded.selectedSubject;
+                        document.getElementById('subjectSelect').innerHTML = `<option value="${loaded.selectedSubject}" selected>${loaded.selectedSubject}</option>`;
+                        document.getElementById('subjectSelectionArea').classList.remove('hidden');
+                        document.getElementById('subjectSelectFull').innerHTML = `<option value="${loaded.selectedSubject}" selected>${loaded.selectedSubject}</option>`;
+                        document.getElementById('subjectSelectionAreaFull').classList.remove('hidden');
+                    }
+
+                    updatePrintLayouts();
+                    appState.subjectSummaryHtml = loaded.subjectSummaryHtml || "";
+                    appState.criteriaList = loaded.criteriaList || [];
+                    appState.commonHtml = loaded.commonHtml || "";
+                    appState.introHtml = loaded.introHtml || "";
+                    appState.trackingHtml = loaded.trackingHtml || "";
+                    appState.resumenHtml = loaded.resumenHtml || "";
+                    appState.sdas = (loaded.sdas || []).map(html => ({ html: html }));
+                    
+                    if(appState.subjectSummaryHtml) {
+                        document.getElementById('summaryArea').classList.remove('hidden');
+                        document.getElementById('sdaCreatorPanel').classList.remove('hidden');
+                        document.getElementById('summaryContent').innerHTML = appState.subjectSummaryHtml;
+                        document.getElementById('summaryAreaFull').classList.remove('hidden');
+                        document.getElementById('fullCourseCreatorPanel').classList.remove('hidden');
+                        document.getElementById('summaryContentFull').innerHTML = appState.subjectSummaryHtml;
+                        const container = document.getElementById('criteriaContainer');
+                        container.innerHTML = '';
+                        appState.criteriaList.forEach((crit, idx) => {
+                            container.innerHTML += `<label class="flex items-start space-x-2 p-1 hover:bg-gray-100 rounded cursor-pointer">
+                                <input type="checkbox" value="${idx}" class="form-checkbox text-green-600 mt-1">
+                                <span class="text-sm leading-tight">${crit}</span>
+                            </label>`;
+                        });
+                    }
+                    document.getElementById('commonContainer').innerHTML = appState.commonHtml;
+                    document.getElementById('introContainer').innerHTML = appState.introHtml;
+                    document.getElementById('trackingContainer').innerHTML = appState.trackingHtml;
+                    document.getElementById('resumenContainer').innerHTML = appState.resumenHtml || '<div class="text-center text-gray-400 py-20 italic">Genere el documento desde la Pestaña 5.</div>';
+                    renderSDAs();
+                    Swal.fire('Éxito', 'Trabajo cargado correctamente.', 'success');
+                } catch(err) { showError("Archivo inválido o corrupto."); }
+                event.target.value = '';
+            };
+            reader.readAsText(file);
+        }
+
+        function printDocument(areaId) {
+            syncAppStateFromDOM();
+            const printableArea = document.getElementById(areaId).cloneNode(true);
+            printableArea.querySelectorAll('.no-print').forEach(el => el.remove());
+            const iframe = document.createElement('iframe');
+            iframe.style.position = 'absolute'; iframe.style.width = '0'; iframe.style.height = '0'; iframe.style.border = 'none';
+            document.body.appendChild(iframe);
+            const doc = iframe.contentWindow.document;
+            const styles = `
+                <style>
+                    @page { size: A4 portrait; margin: 2cm 1.5cm 2cm 1.5cm; }
+                    body { font-family: Arial, sans-serif; font-size: 10pt; line-height: 1.3; margin: 0; padding: 0; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+                    .print-cover { text-align: center; margin-top: 25%; page-break-after: always; }
+                    .print-cover h1 { margin-top: 2rem; }
+                    h1 { font-size: 18pt; color: #1e3a8a; text-align: center; margin-bottom: 2rem; text-transform: uppercase; }
+                    h2 { font-size: 15pt; color: #1e3a8a; border-bottom: 2px solid #1e3a8a; padding-bottom: 5px; margin-top: 1.5rem; }
+                    h3 { font-size: 12pt; color: #1e3a8a; background-color: #ebf8ff !important; padding: 5px; border-left: 4px solid #2563eb; margin-top: 15px; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+                    h4 { font-size: 11pt; color: #1f2937; margin-top: 10px; font-weight: bold; }
+                    p { text-align: justify; margin-bottom: 0.5rem; }
+                    table { width: 100%; border-collapse: collapse; margin-bottom: 1rem; }
+                    th, td { border: 1px solid #999; padding: 5px; vertical-align: top; }
+                    td:empty { font-size: 8pt; }
+                    .doc-block, .intro-block, .sda-block, .tracking-block { page-break-inside: avoid; }
+                    .bg-green-100 { background-color: #dcfce7 !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+                    h1, h2, h3, h4 { page-break-after: avoid; }
+                    tr { page-break-inside: avoid; }
+                </style>
+            `;
+            doc.open();
+            doc.write(`<!DOCTYPE html><html><head><meta charset="utf-8">${styles}</head><body>${printableArea.innerHTML}</body></html>`);
+            doc.close();
+            iframe.contentWindow.focus();
+            setTimeout(() => { iframe.contentWindow.print(); document.body.removeChild(iframe); }, 500);
+        }
+
+        async function downloadAsDoc(areaId) {
+            syncAppStateFromDOM();
+            const title = document.getElementById('docTitle').value || 'Programacion';
+            let filename = title.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+            const printableArea = document.getElementById(areaId).cloneNode(true);
+            printableArea.querySelectorAll('.no-print').forEach(el => el.remove());
+            const html = `
+                <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
+                <head><meta charset='utf-8'><title>${title}</title>
+                <!--[if gte mso 9]><xml><w:WordDocument><w:View>Print</w:View><w:Zoom>100</w:Zoom></w:WordDocument></xml><![endif]-->
+                <style>
+                    @page { size: A4 portrait; margin: 2cm 1.5cm 2cm 1.5cm; }
+                    body { font-family: Arial, sans-serif; font-size: 10pt; line-height: 1.3; }
+                    table { width: 100%; border-collapse: collapse; margin-bottom: 10px; }
+                    th, td { border: 1px solid #999; padding: 5px; vertical-align: top; }
+                    td:empty { font-size: 8pt; }
+                    h1 { font-size: 18pt; color: #1e3a8a; text-align: center; }
+                    h2 { font-size: 14pt; color: #1e3a8a; border-bottom: 2px solid #1e3a8a; padding-bottom: 5px; }
+                    h3 { font-size: 12pt; color: #1e3a8a; background-color: #ebf8ff; padding: 5px; border-left: 4px solid #2563eb; margin-top: 15px;}
+                    h4 { font-size: 11pt; color: #1f2937; margin-top: 10px; }
+                    .print-cover { text-align: center; margin-top: 150px; page-break-after: always; }
+                    .print-cover div { text-align: center; }
+                </style>
+                </head>
+                <body>${printableArea.innerHTML}</body></html>
+            `;
+            try {
+                if (window.showSaveFilePicker) {
+                    const fileHandle = await window.showSaveFilePicker({ suggestedName: filename + '.rtf', types: [{ description: 'Documento RTF', accept: { 'application/rtf': ['.rtf'] } }] });
+                    const writable = await fileHandle.createWritable(); await writable.write(html); await writable.close();
+                    Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Descargado correctamente', showConfirmButton: false, timer: 2000 });
+                } else {
+                    const blob = new Blob(['\ufeff', html], { type: 'application/rtf' });
+                    const url = URL.createObjectURL(blob); const a = document.createElement('a');
+                    a.href = url; a.download = filename + '.rtf'; document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
+                }
+            } catch (err) { if (err.name !== 'AbortError') { showError("Error al guardar el archivo."); console.error(err); } }
+        }
+    </script>
+</body>
+</html>
